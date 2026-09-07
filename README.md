@@ -154,3 +154,7 @@ For a list of all available metrics, see the dumps below (the format is the same
 ## Grafana Dashboard
 
 The dashboard is now also published on [Grafana](https://grafana.com/grafana/dashboards/12579).
+
+## Optional FRITZ!OS API v0 support
+
+See [API.md](API.md) for the separate metrics-api.json collector and configuration.

@@ -2,16 +2,15 @@
 
 # Build Image
 FROM golang:1.25.5-alpine3.23 AS builder
-RUN go install github.com/sberk42/fritzbox_exporter@latest \
-    && mkdir /app \
-    && mv /go/bin/fritzbox_exporter /app
-
-WORKDIR /app
-
-COPY metrics.json metrics-lua.json /app/
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -o /app/fritzbox_exporter .
+RUN cp metrics.json metrics-lua.json metrics-api.json /app/
 
 # Runtime Image
-FROM alpine:3.23 as runtime-image
+FROM alpine:3.23 AS runtime-image
 
 ARG REPO=sberk42/fritzbox_exporter
 
@@ -34,5 +33,4 @@ COPY --chown=fritzbox:fritzbox --from=builder /app /app
 
 EXPOSE 9042
 
-ENTRYPOINT [ "sh", "-c", "/app/fritzbox_exporter" ]
-CMD [ "-username", "${USERNAME}", "-password", "${PASSWORD}", "-gateway-url", "${GATEWAY_URL}", "-gateway-luaurl", "${GATEWAY_LUAURL}", "-listen-address", "${LISTEN_ADDRESS}" ]
+ENTRYPOINT [ "/app/fritzbox_exporter" ]

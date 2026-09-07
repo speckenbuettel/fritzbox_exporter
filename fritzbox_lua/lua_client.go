@@ -94,10 +94,10 @@ func (lua *LuaSession) v2Login(response string) error {
 	res.Set("username", lua.Username)
 	res.Set("response", response)
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/login_sid.lua?version=2", lua.BaseURL), strings.NewReader(res.Encode()))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	if err != nil {
 		return fmt.Errorf("error forming request: %s", err.Error())
 	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	return lua.doLogin(req)
 }
@@ -142,7 +142,7 @@ func (lua *LuaSession) initLogin() error {
 		version = "?version=2"
 	}
 
-	resp, err := http.Get(fmt.Sprintf("%s/login_sid.lua%s", lua.BaseURL, version))
+	resp, err := lua.Client.Get(fmt.Sprintf("%s/login_sid.lua%s", lua.BaseURL, version))
 	if err != nil {
 		return fmt.Errorf("error calling login_sid.lua: %s", err.Error())
 	}

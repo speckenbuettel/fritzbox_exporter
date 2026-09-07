@@ -719,6 +719,18 @@ func main() {
 	}
 	logrus.SetLevel(level)
 
+	if *flagAPIMetricsFile != "" && !*flagTest && !*flagLuaTest {
+		origin := *flagAPIURL
+		if origin == "" {
+			origin = *flagGatewayLuaURL
+		}
+		apiCollector, err := newAPICollector(*flagAPIMetricsFile, origin, *flagUsername, *flagPassword, *flagSessionApi, *flagGatewayVerifyTLS, *flagAPITimeout)
+		if err != nil {
+			logrus.Fatal("cannot configure API collector: ", err)
+		}
+		prometheus.MustRegister(apiCollector)
+	}
+
 	u, err := url.Parse(*flagGatewayURL)
 	if err != nil {
 		logrus.Errorf("invalid URL: %s", err.Error())
