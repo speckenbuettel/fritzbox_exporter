@@ -1,177 +1,73 @@
-name: Container
+name: DockerHub ARM64
 
 on:
   push:
-    # Publish `main` as Docker `latest` image.
-    branches:
-      - main
-      - master
+    tags: ['api-v0-*']
+  workflow_dispatch:
 
-    # Publish `v1.2.3` tags as releases.
-    tags:
-      - '**' # All tags kick off a new container build Save history ad 5.0.x etc
+permissions:
+  contents: read
 
-  # Run tests for any PRs.
-  pull_request:
-
-env:
-  BUILD_PLATFORM: |
-    linux/arm/v6
-    linux/arm/v7
-    linux/arm64
-    linux/amd64
-  # Enable Docker Buildkit
-  DOCKER_BUILDKIT: 1
-  IMAGE_NAME: fritzbox_exporter
+concurrency:
+  group: dockerhub-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-
+  test:
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Lint Dockerfile
-        uses: hadolint/hadolint-action@v3.0.0
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          dockerfile: Dockerfile
+          go-version: '1.25.5'
+      - run: go test -race ./...
+      - run: go vet ./...
 
-  prepare:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    needs: lint
-    # Map a step output to a job output
-    outputs:
-      DOCKER_REPOSITORY: ${{ steps.tag_image.outputs.DOCKER_REPOSITORY }}
-      DOCKER_TAG: ${{ steps.tag_image.outputs.DOCKER_TAG }}
-
+  publish:
+    needs: test
+    runs-on: ubuntu-24.04-arm
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Tag Image
-        id: tag_image
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Select image tag
+        id: image
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
         run: |
-          DOCKER_REPOSITORY=ghcr.io/${{ github.repository }}
-
-          # Change all uppercase to lowercase
-          DOCKER_REPOSITORY=$(echo $DOCKER_REPOSITORY | tr '[A-Z]' '[a-z]')
-
-          DOCKER_TAG=${{ github.ref_name }}
-
-          # Use Docker `latest` tag convention
-          [ "$DOCKER_TAG" == "master" ] && DOCKER_TAG=latest
-          [ "$DOCKER_TAG" == "main" ] && DOCKER_TAG=latest
-
-          echo DOCKER_REPOSITORY=$DOCKER_REPOSITORY
-          echo DOCKER_TAG=$DOCKER_TAG
-          echo "DOCKER_REPOSITORY=${DOCKER_REPOSITORY}" >> $GITHUB_OUTPUT
-          echo "DOCKER_TAG=${DOCKER_TAG}" >> $GITHUB_OUTPUT
-
-  # Build and push image to GitHub Packages.
-  # See also https://docs.docker.com/docker-hub/builds/
-  build:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    needs: [prepare]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Image and Export
+          tag="sha-${COMMIT}"
+          if [ "$REF_TYPE" = tag ]; then tag="$REF_NAME"; fi
+          echo "name=senecaiii/fritzbox_exporter:${tag}" >> "$GITHUB_OUTPUT"
+      - name: Build ARM64 test image
         uses: docker/build-push-action@v6
         with:
-          build-args: REPO=${{ github.repository }}
           context: .
-          cache-from: |
-            type=gha,scope=build-${{ github.ref_name }}
-            type=gha,scope=build-main
-          cache-to: type=gha,mode=max,scope=build-${{ github.ref_name }}
-          file: Dockerfile
-          platforms: ${{ env.BUILD_PLATFORM }}
-          outputs: type=oci,dest=/tmp/image.tar
-          target: runtime-image
-
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: /tmp/image.tar
-          retention-days: 1
-
-  # Load artifact and push to registry
-  push:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    needs: [prepare, build]
-
-    steps:
-      - name: Download image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-          path: /tmp
-
-      - name: Install skopeo
+          platforms: linux/arm64
+          load: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.image.outputs.name }}
+          build-args: REPO=${{ github.repository }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+      - name: Smoke test image
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y skopeo
-
-      - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | skopeo login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Push OCI image to registry
-        run: |
-          skopeo copy --all \
-            oci-archive:/tmp/image.tar \
-            docker://${{ needs.prepare.outputs.DOCKER_REPOSITORY }}:${{ needs.prepare.outputs.DOCKER_TAG }}
-          skopeo copy --all \
-            oci-archive:/tmp/image.tar \
-            docker://${{ needs.prepare.outputs.DOCKER_REPOSITORY }}:${{ github.sha }}
-          skopeo copy --all \
-            oci-archive:/tmp/image.tar \
-            docker://${{ needs.prepare.outputs.DOCKER_REPOSITORY }}/fritzbox_exporter:${{ needs.prepare.outputs.DOCKER_TAG }}
-          skopeo copy --all \
-            oci-archive:/tmp/image.tar \
-            docker://${{ needs.prepare.outputs.DOCKER_REPOSITORY }}/fritzbox_exporter:${{ github.sha }}
-
-      - name: Inspect image
-        if: success()
-        run: |
-          docker buildx imagetools inspect ${{ needs.prepare.outputs.DOCKER_REPOSITORY }}:${{ needs.prepare.outputs.DOCKER_TAG }}
-          docker buildx imagetools inspect ${{ needs.prepare.outputs.DOCKER_REPOSITORY }}:${{ github.sha }}
-
-  test:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    needs: [prepare, push]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+          test "$(docker image inspect "$IMAGE" --format '{{.Architecture}}')" = arm64
+          docker run --rm "$IMAGE" -help 2>&1 | tee /tmp/exporter-help.txt
+          grep -q api-metrics-file /tmp/exporter-help.txt
+          docker run --rm --entrypoint sh "$IMAGE" -c 'test -s /app/metrics-api.json && test -s /app/metrics-lua.json && test -s /app/metrics.json'
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
         with:
-          image-ref: "${{ needs.prepare.outputs.DOCKER_REPOSITORY }}:${{ github.sha }}"
-          format: 'sarif' 
-          output: 'trivy-results.sarif'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'MEDIUM,HIGH,CRITICAL'
-          
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() 
-        with:
-          sarif_file: 'trivy-results.sarif'
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Publish tested image
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+        run: docker push "$IMAGE"
+      - name: Inspect published image
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+        run: docker buildx imagetools inspect "$IMAGE"
