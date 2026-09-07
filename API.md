@@ -21,7 +21,7 @@ Without `-api-metrics-file`, no API requests or API logins are made.
 The shipped `metrics-api.json` is intentionally empty: endpoint schemas must be
 checked on the target model and firmware before enabling definitions. This
 illustrative definition assumes a response of
-`{"connections":[{"name":"Singapore","state":"ready"}]}` from
+`{"connection":[{"name":"Singapore","state":"ready"}]}` from
 `/api/v0/generic/vpn`. It is not yet a verified production VPN configuration:
 
 ```json
@@ -31,7 +31,7 @@ illustrative definition assumes a response of
     {
       "path": "generic/vpn",
       "params": "",
-      "resultPath": "connections.*",
+      "resultPath": "connection.*",
       "resultKey": "state",
       "okValue": "ready",
       "promType": "GaugeValue",
@@ -90,3 +90,8 @@ session renewal, JSON extraction, caching, concurrent scrapes, invalid paths,
 HTTP/JSON errors, redirects and timeouts. Live verification against the 5690,
 final endpoint definitions and a Docker runtime test remain necessary before
 replacing a production container. The 4040 can continue using SOAP and Lua.
+
+## Query health
+
+Per-definition health metrics and optional empty collections for Lua/API are
+documented in [DIAGNOSTICS.md](DIAGNOSTICS.md).

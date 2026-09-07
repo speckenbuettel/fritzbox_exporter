@@ -64,7 +64,7 @@ func TestAPICollectionAndConcurrentCache(t *testing.T) {
 					t.Error("state conversion")
 				}
 			}
-			if len(families) != 3 {
+			if len(families) != 7 {
 				t.Errorf("metric families: %d", len(families))
 			}
 		}()
@@ -124,7 +124,7 @@ func TestAPIFailureHandling(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if calls != 1 || len(f) != 1 || f[0].Metric[0].GetCounter().GetValue() != 1 {
+			if calls != 1 || len(f) != 6 || f[0].Metric[0].GetCounter().GetValue() != 1 {
 				t.Fatalf("calls=%d families=%v", calls, f)
 			}
 			if c.session.SID != "valid" {
@@ -242,7 +242,7 @@ func TestAPICacheExpiryAndMissingValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(families) != 1 {
+	if len(families) != 6 {
 		t.Error("missing values emitted")
 	}
 	for key, entry := range c.cache {

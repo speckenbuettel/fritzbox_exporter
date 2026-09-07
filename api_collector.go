@@ -26,12 +26,13 @@ var flagAPITimeout = flag.Duration("api-timeout", 10*time.Second, "Timeout per A
 // APICollector is independent of SOAP service discovery and legacy Lua collection.
 // Its session and cache are protected against concurrent Prometheus scrapes.
 type APICollector struct {
-	mu      sync.Mutex
-	session *lua.LuaSession
-	metrics []*LuaMetric
-	renames []lua.LabelRename
-	cache   map[string]apiCacheEntry
-	errors  prometheus.Counter
+	diagnostics queryDiagnostics
+	mu          sync.Mutex
+	session     *lua.LuaSession
+	metrics     []*LuaMetric
+	renames     []lua.LabelRename
+	cache       map[string]apiCacheEntry
+	errors      prometheus.Counter
 }
 type apiCacheEntry struct {
 	data    map[string]interface{}
@@ -167,6 +168,7 @@ func (c *APICollector) load(endpoint string) (map[string]interface{}, error) {
 	return nil, fmt.Errorf("API authentication failed")
 }
 func (c *APICollector) Describe(ch chan<- *prometheus.Desc) {
+	describeQueries(ch, "api")
 	for _, m := range c.metrics {
 		ch <- m.Desc
 	}
@@ -175,10 +177,12 @@ func (c *APICollector) Describe(ch chan<- *prometheus.Desc) {
 func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	defer c.diagnostics.collect(ch)
 	// Also memoize failures for this scrape, avoiding repeated requests/logins.
 	results := make(map[string]map[string]interface{})
 	seen := make(map[string]bool)
-	for _, m := range c.metrics {
+	for i, m := range c.metrics {
+		c.diagnostics.begin("api", i, m.Path, m.PromDesc.FqName)
 		endpoint, _ := apiEndpoint(m.Path, m.Params)
 		data, done := results[endpoint]
 		if !done {
@@ -205,11 +209,13 @@ func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 			results[endpoint] = data
 		}
 		if data == nil {
+			c.diagnostics.fail("request")
 			continue
 		}
-		values, err := lua.GetMetrics(&c.renames, data, m.LuaMetricDef)
+		values, err := lua.GetMetricsWithEmpty(&c.renames, data, m.LuaMetricDef, m.AllowEmpty)
 		if err != nil {
 			c.errors.Inc()
+			c.diagnostics.fail("extract")
 			logrus.Warnf("API metric %s: value unavailable", m.PromDesc.FqName)
 			continue
 		}
@@ -226,15 +232,18 @@ func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 			keyBytes, _ := json.Marshal([]interface{}{m.PromDesc.FqName, m.PromDesc.FixedLabels, labels})
 			key := string(keyBytes)
 			if seen[key] {
+				c.diagnostics.fail("duplicate")
 				c.errors.Inc()
 				continue
 			}
 			seen[key] = true
 			metric, err := prometheus.NewConstMetric(m.Desc, m.MetricType, v.Value, labels...)
 			if err != nil {
+				c.diagnostics.fail("metric")
 				c.errors.Inc()
 				continue
 			}
+			c.diagnostics.emitted()
 			ch <- metric
 		}
 	}

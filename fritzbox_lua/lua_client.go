@@ -283,9 +283,11 @@ func ParseJSON(jsonData []byte) (map[string]interface{}, error) {
 	var data map[string]interface{}
 
 	// Unmarshal or Decode the JSON to the interface.
-	json.Unmarshal(jsonData, &data)
-
-	return data, nil
+	err := json.Unmarshal(jsonData, &data)
+	if err == nil && data == nil {
+		err = fmt.Errorf("expected JSON object")
+	}
+	return data, err
 }
 
 func getRenamedLabel(labelRenames *[]LabelRename, label string) string {
