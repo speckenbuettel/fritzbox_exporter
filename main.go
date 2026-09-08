@@ -145,7 +145,12 @@ type LuaLabelRename struct {
 
 // LuaMetric struct
 type LuaMetric struct {
-	AllowEmpty bool `json:"allowEmpty"`
+	LabelValues    map[string]string  `json:"labelValues"`
+	ParentPath     string             `json:"parentPath"`
+	AllowEmpty     bool               `json:"allowEmpty"`
+	Filter         map[string]string  `json:"filter"`
+	LabelPaths     map[string]string  `json:"labelPaths"`
+	ValueTransform *APIValueTransform `json:"valueTransform"`
 	// initialized loading JSON
 	Path          string       `json:"path"`
 	Params        string       `json:"params"`

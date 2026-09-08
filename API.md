@@ -95,3 +95,23 @@ replacing a production container. The 4040 can continue using SOAP and Lua.
 
 Per-definition health metrics and optional empty collections for Lua/API are
 documented in [DIAGNOSTICS.md](DIAGNOSTICS.md).
+
+## Optional extraction settings (api-v0-test3)
+
+The API collector supports these additional per-definition fields:
+
+- `filter`: exact string comparisons on row-relative field paths, e.g.
+  `{"access_type":"4"}` for WireGuard. A missing filter field is an error.
+  A valid list with no matches is empty and requires `allowEmpty: true`.
+- `valueTransform`: `{"split":",","index":0}` selects a numeric sample from a
+  delimited string. Negative indexes count from the end. Empty, invalid and
+  nonfinite samples are errors. Set the ordering from the actual API semantics.
+- `labelPaths`: maps output labels to row-relative source paths.
+- `labelValues`: supplies literal values for variable labels, useful when the
+  same metric family covers an internal disk and external partitions.
+- `parentPath`: selects parent objects before `resultPath` selects their children.
+  `labelPaths` may then use `$parent.UID` to retain a device identifier.
+
+These settings are API-only; legacy Lua extraction remains compatible.
+See [dashboard examples](examples/dashboard/README.md) for live-checked model
+configurations and the remaining hardware/firmware limitations.

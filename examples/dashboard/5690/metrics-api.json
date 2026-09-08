@@ -1,0 +1,438 @@
+{
+  "labelRenames": [
+    {
+      "matchRegex": "^LAN:1$",
+      "renameLabel": "LAN 1"
+    },
+    {
+      "matchRegex": "^LAN:2$",
+      "renameLabel": "LAN 2"
+    },
+    {
+      "matchRegex": "^LAN:3$",
+      "renameLabel": "LAN 3"
+    },
+    {
+      "matchRegex": "^WAN:1$",
+      "renameLabel": "WAN"
+    }
+  ],
+  "metrics": [
+    {
+      "path": "generic/cpu",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "StatTemperature",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_ecostat_cputemp",
+        "help": "gateway data ecostat cputemp",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {}
+      },
+      "valueTransform": {
+        "split": ",",
+        "index": 0
+      }
+    },
+    {
+      "path": "generic/cpu",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "StatCPU",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_ecostat_cpuutil",
+        "help": "gateway data ecostat cpuutil",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {}
+      },
+      "valueTransform": {
+        "split": ",",
+        "index": 0
+      }
+    },
+    {
+      "path": "generic/cpu",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "StatRAMStrictlyUsed",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_ecostat_ramusage",
+        "help": "gateway data ecostat ramusage",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "ram_type": "Fixed"
+        }
+      },
+      "valueTransform": {
+        "split": ",",
+        "index": 0
+      }
+    },
+    {
+      "path": "generic/cpu",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "StatRAMCacheUsed",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_ecostat_ramusage",
+        "help": "gateway data ecostat ramusage",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "ram_type": "Dynamic"
+        }
+      },
+      "valueTransform": {
+        "split": ",",
+        "index": 0
+      }
+    },
+    {
+      "path": "generic/cpu",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "StatRAMPhysFree",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_ecostat_ramusage",
+        "help": "gateway data ecostat ramusage",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "ram_type": "Free"
+        }
+      },
+      "valueTransform": {
+        "split": ",",
+        "index": 0
+      }
+    },
+    {
+      "path": "generic/vpn",
+      "params": "",
+      "resultPath": "connection.*",
+      "resultKey": "state",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_vpn_bridge",
+        "help": "gateway vpn bridge",
+        "varLabels": [
+          "gateway",
+          "name"
+        ],
+        "fixedLabels": {}
+      },
+      "okValue": "ready",
+      "filter": {
+        "access_type": "3"
+      },
+      "allowEmpty": true
+    },
+    {
+      "path": "generic/vpn",
+      "params": "",
+      "resultPath": "connection.*",
+      "resultKey": "state",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_vpn_wireguard",
+        "help": "gateway vpn wireguard",
+        "varLabels": [
+          "gateway",
+          "name"
+        ],
+        "fixedLabels": {}
+      },
+      "okValue": "ready",
+      "filter": {
+        "access_type": "4"
+      },
+      "allowEmpty": true
+    },
+    {
+      "promDesc": {
+        "varLabels": [
+          "gateway",
+          "name"
+        ],
+        "fixedLabels": {},
+        "fqName": "fritzbox_api_vpn_up",
+        "help": "Whether the FRITZ!Box VPN connection state is ready."
+      },
+      "resultKey": "state",
+      "params": "",
+      "okValue": "ready",
+      "cacheEntryTTL": 30,
+      "path": "generic/vpn",
+      "promType": "GaugeValue",
+      "resultPath": "connection.*",
+      "allowEmpty": true
+    },
+    {
+      "promDesc": {
+        "varLabels": [
+          "gateway",
+          "name"
+        ],
+        "fixedLabels": {},
+        "fqName": "fritzbox_api_vpn_enabled",
+        "help": "Whether the FRITZ!Box VPN connection is enabled in configuration."
+      },
+      "resultKey": "activated",
+      "params": "",
+      "okValue": "1",
+      "cacheEntryTTL": 30,
+      "path": "generic/vpn",
+      "promType": "GaugeValue",
+      "resultPath": "connection.*",
+      "allowEmpty": true
+    },
+    {
+      "path": "generic/power",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "rate_sumact",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_energy_consumption",
+        "help": "gateway data energy consumption",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "name": "System"
+        }
+      }
+    },
+    {
+      "path": "generic/power",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "rate_systemact",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_energy_consumption",
+        "help": "gateway data energy consumption",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "name": "CPU"
+        }
+      }
+    },
+    {
+      "path": "generic/power",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "rate_wlanact",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_energy_consumption",
+        "help": "gateway data energy consumption",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "name": "WLAN"
+        }
+      }
+    },
+    {
+      "path": "generic/power",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "rate_abact",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_energy_consumption",
+        "help": "gateway data energy consumption",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "name": "Phone"
+        }
+      }
+    },
+    {
+      "path": "generic/power",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "rate_usbhostact",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_energy_consumption",
+        "help": "gateway data energy consumption",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "name": "USB"
+        }
+      }
+    },
+    {
+      "path": "generic/eth_ports",
+      "params": "",
+      "resultPath": "eth.*",
+      "resultKey": "carrier",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_lan",
+        "help": "gateway lan",
+        "varLabels": [
+          "gateway",
+          "name"
+        ],
+        "fixedLabels": {}
+      },
+      "labelPaths": {
+        "name": "label"
+      },
+      "okValue": "1"
+    },
+    {
+      "path": "generic/dect",
+      "params": "",
+      "resultPath": "",
+      "resultKey": "enabled",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_dect_base",
+        "help": "gateway dect base",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {}
+      },
+      "okValue": "1"
+    },
+    {
+      "path": "storage",
+      "params": "",
+      "resultPath": "internalStorage",
+      "resultKey": "capacity",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_storage_total",
+        "help": "gateway data storage total",
+        "varLabels": [
+          "gateway",
+          "devicename",
+          "partition"
+        ],
+        "fixedLabels": {
+          "devicetype": "Internal"
+        }
+      },
+      "labelValues": {
+        "devicename": "Internal",
+        "partition": ""
+      }
+    },
+    {
+      "path": "storage",
+      "params": "",
+      "resultPath": "partitions.*",
+      "resultKey": "capacity",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_storage_total",
+        "help": "gateway data storage total",
+        "varLabels": [
+          "gateway",
+          "devicename",
+          "partition"
+        ],
+        "fixedLabels": {
+          "devicetype": "USB"
+        }
+      },
+      "parentPath": "externalStorages.*",
+      "labelPaths": {
+        "devicename": "$parent.UID",
+        "partition": "label"
+      },
+      "allowEmpty": true
+    },
+    {
+      "path": "storage",
+      "params": "",
+      "resultPath": "internalStorage",
+      "resultKey": "usedSpace",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_storage_used",
+        "help": "gateway data storage used",
+        "varLabels": [
+          "gateway",
+          "devicename",
+          "partition"
+        ],
+        "fixedLabels": {
+          "devicetype": "Internal"
+        }
+      },
+      "labelValues": {
+        "devicename": "Internal",
+        "partition": ""
+      }
+    },
+    {
+      "path": "storage",
+      "params": "",
+      "resultPath": "partitions.*",
+      "resultKey": "usedSpace",
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "promDesc": {
+        "fqName": "gateway_data_storage_used",
+        "help": "gateway data storage used",
+        "varLabels": [
+          "gateway",
+          "devicename",
+          "partition"
+        ],
+        "fixedLabels": {
+          "devicetype": "USB"
+        }
+      },
+      "parentPath": "externalStorages.*",
+      "labelPaths": {
+        "devicename": "$parent.UID",
+        "partition": "label"
+      },
+      "allowEmpty": true
+    }
+  ]
+}

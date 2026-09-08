@@ -212,7 +212,7 @@ func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 			c.diagnostics.fail("request")
 			continue
 		}
-		values, err := lua.GetMetricsWithEmpty(&c.renames, data, m.LuaMetricDef, m.AllowEmpty)
+		values, err := extractAPIMetrics(&c.renames, data, m)
 		if err != nil {
 			c.errors.Inc()
 			c.diagnostics.fail("extract")

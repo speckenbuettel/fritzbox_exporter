@@ -1,0 +1,615 @@
+[
+  {
+    "service": "urn:dslforum-org:service:DeviceInfo:1",
+    "action": "GetInfo",
+    "result": "ModelName",
+    "promDesc": {
+      "fqName": "gateway_device_modelname",
+      "help": "gateway device modelname",
+      "varLabels": [
+        "gateway",
+        "ManufacturerName",
+        "ModelName",
+        "SerialNumber",
+        "HardwareVersion",
+        "SoftwareVersion"
+      ]
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 86400
+  },
+  {
+    "service": "urn:dslforum-org:service:DeviceInfo:1",
+    "action": "GetInfo",
+    "result": "UpTime",
+    "promDesc": {
+      "fqName": "gateway_uptime_seconds",
+      "help": "gateway uptime (seconds)",
+      "varLabels": [
+        "gateway"
+      ]
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 300
+  },
+  {
+    "service": "urn:dslforum-org:service:WANIPConnection:1",
+    "action": "GetInfo",
+    "result": "ExternalIPAddress",
+    "promDesc": {
+      "fqName": "gateway_connection_external_ip",
+      "help": "gateway external IP address",
+      "varLabels": [
+        "gateway",
+        "MACAddress",
+        "ExternalIPAddress",
+        "LastConnectionError"
+      ],
+      "fixedLabels": {
+        "connection": "IP",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 600
+  },
+  {
+    "service": "urn:dslforum-org:service:WANIPConnection:1",
+    "action": "GetStatusInfo",
+    "result": "ConnectionStatus",
+    "okValue": "Connected",
+    "promDesc": {
+      "fqName": "gateway_connection_status",
+      "help": "gateway connection status (1 = connected)",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "connection": "IP",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WANIPConnection:1",
+    "action": "GetStatusInfo",
+    "result": "Uptime",
+    "promDesc": {
+      "fqName": "gateway_connection_uptime_seconds",
+      "help": "gateway connection uptime (seconds)",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "connection": "IP",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 300
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetTotalBytesReceived",
+    "result": "TotalBytesReceived",
+    "promDesc": {
+      "fqName": "gateway_traffic",
+      "help": "traffic on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Received",
+        "unit": "Bytes",
+        "interface": "WAN"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetTotalBytesSent",
+    "result": "TotalBytesSent",
+    "promDesc": {
+      "fqName": "gateway_traffic",
+      "help": "traffic on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Sent",
+        "unit": "Bytes",
+        "interface": "WAN"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetTotalPacketsReceived",
+    "result": "TotalPacketsReceived",
+    "promDesc": {
+      "fqName": "gateway_traffic",
+      "help": "traffic on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Received",
+        "unit": "Packets",
+        "interface": "WAN"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetTotalPacketsSent",
+    "result": "TotalPacketsSent",
+    "promDesc": {
+      "fqName": "gateway_traffic",
+      "help": "traffic on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Sent",
+        "unit": "Packets",
+        "interface": "WAN"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetAddonInfos",
+    "result": "ByteReceiveRate",
+    "promDesc": {
+      "fqName": "gateway_traffic_rate",
+      "help": "traffic rate on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Received",
+        "unit": "Bytes",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetAddonInfos",
+    "result": "ByteSendRate",
+    "promDesc": {
+      "fqName": "gateway_traffic_rate",
+      "help": "traffic rate on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Sent",
+        "unit": "Bytes",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetCommonLinkProperties",
+    "result": "WANAccessType",
+    "okValue": "Ethernet",
+    "promDesc": {
+      "fqName": "gateway_access_type",
+      "help": "gateway access type (ETHERNET, CABLE, FIBRE, etc.)",
+      "varLabels": [
+        "gateway",
+        "WANAccessType"
+      ],
+      "fixedLabels": {
+        "connection": "Access Type",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 3600
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetCommonLinkProperties",
+    "result": "PhysicalLinkStatus",
+    "okValue": "Up",
+    "promDesc": {
+      "fqName": "gateway_connection_status",
+      "help": "gateway connection status (1 = connected)",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "connection": "Physical Link",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetCommonLinkProperties",
+    "result": "Layer1DownstreamMaxBitRate",
+    "promDesc": {
+      "fqName": "gateway_max_bitrate",
+      "help": "max bitrate on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Down",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 86400
+  },
+  {
+    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    "action": "GetCommonLinkProperties",
+    "result": "Layer1UpstreamMaxBitRate",
+    "promDesc": {
+      "fqName": "gateway_max_bitrate",
+      "help": "max bitrate on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Up",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 86400
+  },
+  {
+    "service": "urn:dslforum-org:service:LANEthernetInterfaceConfig:1",
+    "action": "GetStatistics",
+    "result": "Stats.BytesReceived",
+    "promDesc": {
+      "fqName": "gateway_traffic",
+      "help": "traffic on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Received",
+        "unit": "Bytes",
+        "interface": "LAN"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:LANEthernetInterfaceConfig:1",
+    "action": "GetStatistics",
+    "result": "Stats.BytesSent",
+    "promDesc": {
+      "fqName": "gateway_traffic",
+      "help": "traffic on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Sent",
+        "unit": "Bytes",
+        "interface": "LAN"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:Hosts:1",
+    "action": "GetGenericHostEntry",
+    "actionArgument": {
+      "name": "NewIndex",
+      "isIndex": true,
+      "providerAction": "GetHostNumberOfEntries",
+      "value": "HostNumberOfEntries"
+    },
+    "result": "Active",
+    "promDesc": {
+      "fqName": "gateway_hosts",
+      "help": "host status and details",
+      "varLabels": [
+        "gateway",
+        "MACAddress",
+        "IPAddress",
+        "AddressSource",
+        "InterfaceType",
+        "HostName"
+      ]
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:1",
+    "action": "GetInfo",
+    "result": "Status",
+    "okValue": "Up",
+    "promDesc": {
+      "fqName": "gateway_wlan_status",
+      "help": "WLAN status (1 = enabled)",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "wlan": "2.4 GHz"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:1",
+    "action": "GetInfo",
+    "result": "Channel",
+    "promDesc": {
+      "fqName": "gateway_wlan_channel",
+      "help": "WLAN channel",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "wlan": "2.4 GHz"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 300
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:1",
+    "action": "GetTotalAssociations",
+    "result": "TotalAssociations",
+    "promDesc": {
+      "fqName": "gateway_wlan_connections",
+      "help": "current WLAN connections",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "wlan": "2.4 GHz"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:1",
+    "action": "GetStatistics",
+    "result": "TotalPacketsReceived",
+    "promDesc": {
+      "fqName": "gateway_wlan_traffic",
+      "help": "traffic on WLAN interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Received",
+        "unit": "Packets",
+        "wlan": "2.4 GHz"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:1",
+    "action": "GetStatistics",
+    "result": "TotalPacketsSent",
+    "promDesc": {
+      "fqName": "gateway_wlan_traffic",
+      "help": "traffic on WLAN interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Sent",
+        "unit": "Packets",
+        "wlan": "2.4 GHz"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:2",
+    "action": "GetInfo",
+    "result": "Status",
+    "okValue": "Up",
+    "promDesc": {
+      "fqName": "gateway_wlan_status",
+      "help": "WLAN status (1 = enabled)",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "wlan": "5 GHz"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:2",
+    "action": "GetInfo",
+    "result": "Channel",
+    "promDesc": {
+      "fqName": "gateway_wlan_channel",
+      "help": "WLAN channel",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "wlan": "5 GHz"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 300
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:2",
+    "action": "GetTotalAssociations",
+    "result": "TotalAssociations",
+    "promDesc": {
+      "fqName": "gateway_wlan_connections",
+      "help": "current WLAN connections",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "wlan": "5 GHz"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:2",
+    "action": "GetStatistics",
+    "result": "TotalPacketsReceived",
+    "promDesc": {
+      "fqName": "gateway_wlan_traffic",
+      "help": "traffic on WLAN interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Received",
+        "unit": "Packets",
+        "wlan": "5 GHz"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:2",
+    "action": "GetStatistics",
+    "result": "TotalPacketsSent",
+    "promDesc": {
+      "fqName": "gateway_wlan_traffic",
+      "help": "traffic on WLAN interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Sent",
+        "unit": "Packets",
+        "wlan": "5 GHz"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:3",
+    "action": "GetInfo",
+    "result": "Status",
+    "okValue": "Up",
+    "promDesc": {
+      "fqName": "gateway_wlan_status",
+      "help": "WLAN status (1 = enabled)",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "wlan": "Guest"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:3",
+    "action": "GetInfo",
+    "result": "Channel",
+    "promDesc": {
+      "fqName": "gateway_wlan_channel",
+      "help": "WLAN channel",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "wlan": "Guest"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 300
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:3",
+    "action": "GetTotalAssociations",
+    "result": "TotalAssociations",
+    "promDesc": {
+      "fqName": "gateway_wlan_connections",
+      "help": "current WLAN connections",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "wlan": "Guest"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:3",
+    "action": "GetStatistics",
+    "result": "TotalPacketsReceived",
+    "promDesc": {
+      "fqName": "gateway_wlan_traffic",
+      "help": "traffic on WLAN interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Received",
+        "unit": "Packets",
+        "wlan": "Guest"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WLANConfiguration:3",
+    "action": "GetStatistics",
+    "result": "TotalPacketsSent",
+    "promDesc": {
+      "fqName": "gateway_wlan_traffic",
+      "help": "traffic on WLAN interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Sent",
+        "unit": "Packets",
+        "wlan": "Guest"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  }
+]
