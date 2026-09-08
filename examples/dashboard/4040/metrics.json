@@ -611,5 +611,28 @@
     },
     "promType": "CounterValue",
     "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_Homeplug:1",
+    "action": "GetGenericDeviceEntry",
+    "actionArgument": {
+      "name": "NewIndex",
+      "isIndex": true,
+      "providerAction": "GetNumberOfDeviceEntries",
+      "value": "NumberOfEntries"
+    },
+    "result": "Active",
+    "promDesc": {
+      "fqName": "gateway_powerline",
+      "help": "powerline device status and details",
+      "varLabels": [
+        "gateway",
+        "Model",
+        "MACAddress",
+        "Name"
+      ]
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 300
   }
 ]
