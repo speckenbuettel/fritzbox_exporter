@@ -66,13 +66,13 @@ var (
 
 var (
 	collectErrors = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "fritzbox_exporter_collectErrors",
+		Name: "fritzbox_exporter_collect_errors_total",
 		Help: "Number of collection errors.",
 	})
 )
 var (
 	luaCollectErrors = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "fritzbox_exporter_luaCollectErrors",
+		Name: "fritzbox_exporter_lua_collect_errors_total",
 		Help: "Number of lua collection errors.",
 	})
 )

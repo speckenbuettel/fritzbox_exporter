@@ -96,3 +96,13 @@ Use the diagnostic table to audit SOAP/Lua/API definitions after firmware
 updates. A successful extraction still requires a semantic check against the
 router UI (units, interface, expected values); diagnostics alone cannot prove
 that a metric describes the intended quantity.
+
+## Collection counter names
+
+Collection error counters use snake_case and the _total suffix:
+- fritzbox_exporter_collect_errors_total (SOAP)
+- fritzbox_exporter_lua_collect_errors_total
+- fritzbox_exporter_api_collect_errors_total
+
+The former names fritzbox_exporter_collectErrors and fritzbox_exporter_luaCollectErrors were removed. Update dashboard queries and alert rules when upgrading. Counter behavior is unchanged.
+
