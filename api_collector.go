@@ -177,12 +177,21 @@ func (c *APICollector) Describe(ch chan<- *prometheus.Desc) {
 func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	ctx, done := collectionBudget("api")
+	defer done()
+	old := c.session.Client.Transport
+	c.session.Client.Transport = budgetTransport{ctx, transportOrDefault(old)}
+	defer func() { c.session.Client.Transport = old }()
 	defer c.diagnostics.collect(ch)
 	// Also memoize failures for this scrape, avoiding repeated requests/logins.
 	results := make(map[string]map[string]interface{})
 	seen := make(map[string]bool)
 	for i, m := range c.metrics {
 		c.diagnostics.begin("api", i, m.Path, m.PromDesc.FqName)
+		if ctx.Err() != nil {
+			c.diagnostics.fail("timeout")
+			continue
+		}
 		endpoint, _ := apiEndpoint(m.Path, m.Params)
 		data, done := results[endpoint]
 		if !done {

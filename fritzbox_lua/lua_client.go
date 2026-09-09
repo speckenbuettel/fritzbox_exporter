@@ -244,9 +244,9 @@ func (lua *LuaSession) LoadData(page LuaPage) ([]byte, error) {
 		}
 
 		if method == "POST" {
-			resp, err = http.Post(dataURL, "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(params)))
+			resp, err = lua.Client.Post(dataURL, "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(params)))
 		} else if method == "GET" {
-			resp, err = http.Get(dataURL + "?" + params)
+			resp, err = lua.Client.Get(dataURL + "?" + params)
 		} else {
 			err = fmt.Errorf("method %s is unsupported in path %s", method, page.Path)
 		}

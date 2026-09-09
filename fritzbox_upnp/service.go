@@ -97,7 +97,7 @@ type Action struct {
 	ArgumentMap map[string]*Argument // Map of arguments indexed by .Name
 }
 
-// ActionArgument an Inüut Argument to pass to an action
+// ActionArgument an InÃƒÂ¼ut Argument to pass to an action
 type ActionArgument struct {
 	Name  string
 	Value interface{}
@@ -302,6 +302,14 @@ var authHeader = ""
 
 // Call an action with argument if given
 func (a *Action) Call(actionArg *ActionArgument) (Result, error) {
+	return a.CallWithClient(actionArg, nil)
+}
+
+// CallWithClient uses the collector-owned timeout and cancellation policy.
+func (a *Action) CallWithClient(actionArg *ActionArgument, client *http.Client) (Result, error) {
+	if client == nil {
+		client = http.DefaultClient
+	}
 	req, err := a.createCallHTTPRequest(actionArg)
 
 	if err != nil {
@@ -314,7 +322,7 @@ func (a *Action) Call(actionArg *ActionArgument) (Result, error) {
 	}
 
 	// first try call without auth header
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return nil, err
@@ -338,7 +346,7 @@ func (a *Action) Call(actionArg *ActionArgument) (Result, error) {
 
 			req.Header.Set("Authorization", authHeader)
 
-			resp, err = http.DefaultClient.Do(req)
+			resp, err = client.Do(req)
 
 			if err != nil {
 				return nil, fmt.Errorf("%s: %s", a.Name, err.Error())

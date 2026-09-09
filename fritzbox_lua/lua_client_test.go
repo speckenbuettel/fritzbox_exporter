@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestLegacyLuaTransport(t *testing.T) {
@@ -26,6 +27,21 @@ func TestLegacyLuaTransport(t *testing.T) {
 			b, err := session.LoadData(LuaPage{Path: path, Params: "page=energy"})
 			if err != nil || string(b) != `{"data":{"value":12}}` {
 				t.Fatalf("%s %v", b, err)
+			}
+		})
+	}
+}
+
+func TestLuaDataUsesSessionTimeout(t *testing.T) {
+	for _, path := range []string{"data.lua", "GET:data.lua"} {
+		t.Run(path, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { time.Sleep(150 * time.Millisecond) }))
+			defer server.Close()
+			session := LuaSession{BaseURL: server.URL, SID: "test", Client: http.Client{Timeout: 30 * time.Millisecond}}
+			start := time.Now()
+			_, err := session.LoadData(LuaPage{Path: path})
+			if err == nil || time.Since(start) > time.Second {
+				t.Fatalf("Lua timeout not respected: %v", err)
 			}
 		})
 	}

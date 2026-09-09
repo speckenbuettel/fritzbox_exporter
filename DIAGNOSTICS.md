@@ -106,3 +106,13 @@ Collection error counters use snake_case and the _total suffix:
 
 The former names fritzbox_exporter_collectErrors and fritzbox_exporter_luaCollectErrors were removed. Update dashboard queries and alert rules when upgrading. Counter behavior is unchanged.
 
+
+## Bounded collections (api-v0-test5)
+
+SOAP_TIMEOUT and LUA_TIMEOUT default to 10s per HTTP request, including response bodies. API_TIMEOUT remains unchanged. COLLECTION_TIMEOUT defaults to 25s. SOAP and Lua share one total budget; the concurrently gathered API collector has the same budget. Values must be positive.
+
+For the remote 4040 with a Prometheus scrape timeout of 55s, set COLLECTION_TIMEOUT=45s, SOAP_TIMEOUT=10s and LUA_TIMEOUT=10s. Keep the total budget below the Prometheus scrape timeout. For the 5690's 30s scrape timeout, the default 25s budget applies. A budget that is too short produces explicit failures rather than silently queueing more work; adjust the scrape timeout and collection budget together if required.
+
+When the budget expires, active HTTP requests are cancelled and remaining definitions are marked with query_error reason="timeout". Individual request failures continue to use reason="request". Existing successful samples from earlier in a partial collection may still be returned; inspect query_success. Collection timeouts are counted by fritzbox_exporter_collection_timeouts_total{backend="soap_lua"|"api"}. A simultaneous /metrics request gets HTTP 503 immediately and increments fritzbox_exporter_scrapes_rejected_total. There is no queue. Prometheus marks a rejected scrape as up=0.
+
+A disconnected Prometheus client does not directly cancel the collector: its independent finite budget remains in force. This applies to metrics collection; service discovery at startup is separate. Counters may be observed on the following scrape because registry collectors are gathered concurrently.

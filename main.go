@@ -16,6 +16,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -191,13 +192,15 @@ var luaCache map[string]*luaCacheEntry
 
 // FritzboxCollector main struct
 type FritzboxCollector struct {
-	collectMu   sync.Mutex
-	diagnostics queryDiagnostics
-	URL         string
-	Gateway     string
-	Username    string
-	Password    string
-	VerifyTls   bool
+	collectMu         sync.Mutex
+	collectionContext context.Context
+	soapClient        *http.Client
+	diagnostics       queryDiagnostics
+	URL               string
+	Gateway           string
+	Username          string
+	Password          string
+	VerifyTls         bool
 
 	// support for lua collector
 	LuaSession   *lua.LuaSession
@@ -409,7 +412,10 @@ func (fc *FritzboxCollector) getActionResult(metric *Metric, actionName string, 
 			return nil, fmt.Errorf("action %s not found in service %s", actionName, metric.Service)
 		}
 
-		data, err := action.Call(actionArg)
+		if fc.collectionContext != nil && fc.collectionContext.Err() != nil {
+			return nil, fc.collectionContext.Err()
+		}
+		data, err := action.CallWithClient(actionArg, fc.soapClient)
 
 		if err != nil {
 			return nil, err
@@ -429,6 +435,16 @@ func (fc *FritzboxCollector) getActionResult(metric *Metric, actionName string, 
 func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 	fc.collectMu.Lock()
 	defer fc.collectMu.Unlock()
+	ctx, done := collectionBudget("soap_lua")
+	defer done()
+	fc.collectionContext = ctx
+	fc.soapClient = &http.Client{Timeout: *flagSOAPTimeout, Transport: budgetTransport{ctx, http.DefaultTransport}}
+	if fc.LuaSession != nil {
+		old := fc.LuaSession.Client
+		fc.LuaSession.Client.Timeout = *flagLuaTimeout
+		fc.LuaSession.Client.Transport = budgetTransport{ctx, transportOrDefault(old.Transport)}
+		defer func() { fc.LuaSession.Client = old }()
+	}
 	defer fc.diagnostics.collect(ch)
 	fc.Lock()
 	root := fc.Root
@@ -454,6 +470,10 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 
 	for i, m := range metrics {
 		fc.diagnostics.begin("soap", i, m.Service+"/"+m.Action, m.PromDesc.FqName)
+		if ctx.Err() != nil {
+			fc.diagnostics.fail("timeout")
+			continue
+		}
 		var actArg *upnp.ActionArgument
 		if m.ActionArgument != nil {
 			aa := m.ActionArgument
@@ -494,6 +514,10 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 				}
 
 				for i := 0; i < count; i++ {
+					if ctx.Err() != nil {
+						fc.diagnostics.fail("timeout")
+						break
+					}
 					actArg = &upnp.ActionArgument{Name: aa.Name, Value: i}
 					result, err := fc.getActionResult(m, m.Action, actArg)
 
@@ -537,6 +561,10 @@ func (fc *FritzboxCollector) collectLua(ch chan<- prometheus.Metric, dupCache ma
 
 	for i, lm := range luaMetrics {
 		fc.diagnostics.begin("lua", i, luaQuerySource(lm), lm.PromDesc.FqName)
+		if fc.collectionContext != nil && fc.collectionContext.Err() != nil {
+			fc.diagnostics.fail("timeout")
+			continue
+		}
 		key := lm.Path + "_" + lm.Params
 
 		cacheEntry := luaCache[key]
@@ -760,6 +788,10 @@ func getValueType(vt string) prometheus.ValueType {
 
 func main() {
 	flag.Parse()
+	if *flagSOAPTimeout <= 0 || *flagLuaTimeout <= 0 || *flagCollectionTimeout <= 0 {
+		logrus.Fatal("request and collection timeouts must be positive")
+	}
+	prometheus.MustRegister(collectionTimeouts, overlappingScrapes)
 	level, e := logrus.ParseLevel(*flagLogLevel)
 	if e != nil {
 		logrus.Warnf("Can not parse log level: %s use INFO", e)
@@ -987,7 +1019,7 @@ func main() {
 		prometheus.MustRegister(collectLuaResultsLoaded)
 	}
 
-	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/metrics", rejectOverlappingScrapes(promhttp.Handler()))
 	logrus.Infof("metrics available at http://%s/metrics", *flagAddr)
 	http.HandleFunc("/ready", collector.ReadynessHandler)
 	logrus.Infof("readyness check available at http://%s/ready", *flagAddr)
