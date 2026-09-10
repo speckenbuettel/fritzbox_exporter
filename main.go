@@ -146,12 +146,13 @@ type LuaLabelRename struct {
 
 // LuaMetric struct
 type LuaMetric struct {
-	LabelValues    map[string]string  `json:"labelValues"`
-	ParentPath     string             `json:"parentPath"`
-	AllowEmpty     bool               `json:"allowEmpty"`
-	Filter         map[string]string  `json:"filter"`
-	LabelPaths     map[string]string  `json:"labelPaths"`
-	ValueTransform *APIValueTransform `json:"valueTransform"`
+	PowerlineSpectrum bool               `json:"powerlineSpectrum"`
+	LabelValues       map[string]string  `json:"labelValues"`
+	ParentPath        string             `json:"parentPath"`
+	AllowEmpty        bool               `json:"allowEmpty"`
+	Filter            map[string]string  `json:"filter"`
+	LabelPaths        map[string]string  `json:"labelPaths"`
+	ValueTransform    *APIValueTransform `json:"valueTransform"`
 	// initialized loading JSON
 	Path          string       `json:"path"`
 	Params        string       `json:"params"`
@@ -603,7 +604,7 @@ func (fc *FritzboxCollector) collectLua(ch chan<- prometheus.Metric, dupCache ma
 			collectLuaResultsCached.Inc()
 		}
 
-		metricVals, err := lua.GetMetricsWithEmpty(fc.LabelRenames, *cacheEntry.Result, lm.LuaMetricDef, lm.AllowEmpty)
+		metricVals, err := extractLuaDefinition(fc.LabelRenames, *cacheEntry.Result, lm)
 
 		if err != nil {
 			logrus.Errorf("Can not get metric values for %s.%s: %s", lm.ResultPath, lm.ResultKey, err.Error())
