@@ -49,7 +49,9 @@ jobs:
           sbom: false
           tags: ${{ steps.image.outputs.name }}
           build-args: REPO=${{ github.repository }}
-          labels: org.opencontainers.image.revision=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ github.ref_name }}
       - name: Smoke test image
         env:
           IMAGE: ${{ steps.image.outputs.name }}

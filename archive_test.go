@@ -171,3 +171,32 @@ func TestArchiveFailedWriteDoesNotAdvancePoll(t *testing.T) {
 		t.Fatal("failed transaction reported as saved")
 	}
 }
+
+func TestArchiveOptionalToken(t *testing.T) {
+	for _, token := range []string{"", "0123456789abcdef"} {
+		a, err := openArchive(filepath.Join(t.TempDir(), "events.db"), "box", token, "Europe/Berlin", time.Hour, 100, 8)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequest("GET", "/api/events", nil)
+		w := httptest.NewRecorder()
+		a.events(w, req)
+		expected := 200
+		if token != "" {
+			expected = 401
+		}
+		if w.Code != expected {
+			t.Fatalf("token=%t status=%d", token != "", w.Code)
+		}
+		view := httptest.NewRecorder()
+		a.page(view, httptest.NewRequest("GET", "/events", nil))
+		want := "const requiresToken=false"
+		if token != "" {
+			want = "const requiresToken=true"
+		}
+		if !strings.Contains(view.Body.String(), want) || strings.Contains(view.Body.String(), "/*ARCHIVE_AUTH*/") {
+			t.Fatal("wrong browser auth mode")
+		}
+		a.db.Close()
+	}
+}

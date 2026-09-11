@@ -22,7 +22,7 @@ import (
 
 var (
 	flagArchiveFile      = flag.String("archive-file", "", "SQLite archive path; empty disables archive")
-	flagArchiveToken     = flag.String("archive-token", "", "Read API bearer token (required when archive enabled)")
+	flagArchiveToken     = flag.String("archive-token", "", "Optional read API bearer token; empty allows access without login")
 	flagArchiveTimezone  = flag.String("archive-timezone", "Europe/Berlin", "Router event timezone")
 	flagArchiveInterval  = flag.Duration("archive-interval", 30*time.Second, "Router event polling interval")
 	flagArchiveRetention = flag.Duration("archive-retention", 90*24*time.Hour, "Archive retention")
@@ -71,7 +71,7 @@ type archive struct {
 }
 
 func openArchive(path, gateway, token, zone string, retention time.Duration, maxRows, maxMB int) (*archive, error) {
-	if len(token) < 16 {
+	if token != "" && len(token) < 16 {
 		return nil, fmt.Errorf("ARCHIVE_TOKEN must contain at least 16 characters")
 	}
 	if retention <= 0 || maxRows < 100 || maxMB < 8 {

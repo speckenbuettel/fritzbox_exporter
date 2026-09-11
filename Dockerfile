@@ -12,7 +12,7 @@ RUN cp metrics.json metrics-lua.json metrics-api.json /app/
 # Runtime Image
 FROM alpine:3.23 AS runtime-image
 
-ARG REPO=sberk42/fritzbox_exporter
+ARG REPO=speckenbuettel/fritzbox_exporter
 
 LABEL org.opencontainers.image.source https://github.com/${REPO}
 

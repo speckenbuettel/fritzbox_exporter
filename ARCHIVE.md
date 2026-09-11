@@ -4,7 +4,7 @@ Das Archiv speichert FRITZ!Box-Ereignisse aus SOAP `DeviceInfo/GetDeviceLog` und
 
 ## Portainer
 
-Image: `senecaiii/fritzbox_exporter:api-v0-test8` (Linux ARM64).
+Image: `senecaiii/fritzbox_exporter:api-v0-test9` (Linux ARM64).
 
 Pro Exporter ein eigenes persistentes Volume nach `/data` einbinden. Niemals zwei Exporter dieselbe SQLite-Datei schreiben lassen. Daten lokal speichern, nicht auf einer SMB-/NFS-Freigabe. Bei einem späteren Umzug das Archiv bei gestopptem Container kopieren.
 
@@ -27,7 +27,7 @@ Nach dem Aktualisieren/Neuerstellen öffnen:
 - 5690: `http://192.168.188.151:9059/events`
 - 4040: `http://192.168.188.151:9044/events`
 
-Den jeweiligen `ARCHIVE_TOKEN` eingeben. Er bleibt nur im Arbeitsspeicher dieser Browserseite, wird nicht in URLs, Cookies oder LocalStorage gespeichert. Ein gemeinsamer selbst gewählter Schlüssel für beide Instanzen ist möglich. Die ungeschützte HTML-Seite enthält keine Ereignisse; die Daten-API verlangt den Schlüssel. Zugriff im eigenen Netz/VPN; bei Nutzung über nicht vertrauenswürdige Netze HTTPS über einen Reverse Proxy verwenden. Die vorhandene HTTP-Verbindung verschlüsselt den Schlüssel nicht.
+Ohne `ARCHIVE_TOKEN` �ffnet sich die Ereignisansicht direkt; jeder Client mit Netzwerkzugriff auf diesen Exporter kann dann das Archiv lesen. Ist ein Schl�ssel gesetzt (mindestens 16 Zeichen), bleiben Ansicht und API gesch�tzt. Der Schl�ssel bleibt nur im Arbeitsspeicher der Browserseite, nicht in URLs, Cookies oder LocalStorage. Bei HTTP wird er unverschl�sselt �bertragen.
 
 ## Anzeige und Speicherung
 
@@ -49,7 +49,7 @@ Bei Ausfall der 5690 bleibt das Archiv erreichbar, solange der TWS und dessen Ne
 
 ## Lesende Schnittstelle
 
-`GET /api/events` mit Header `Authorization: Bearer <ARCHIVE_TOKEN>`.
+`GET /api/events`; nur bei konfiguriertem Schl�ssel ist der Header `Authorization: Bearer <ARCHIVE_TOKEN>` erforderlich.
 
 Optionale Parameter: `gateway`, `kind` (`router`, `query`, `recovery`), `backend` (`router`, `soap`, `lua`, `api`, `archive`), `q` (Textsuche), `from` und `to` (RFC3339-Zeit), `limit` (1–500, Standard 200), `offset` (Standard 0).
 

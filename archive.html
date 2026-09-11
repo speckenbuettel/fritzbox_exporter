@@ -7,6 +7,7 @@ body{font:15px system-ui,sans-serif;background:#f3f5f8;color:#172b4d;margin:0}ma
 <section id="archive" hidden><form id="filters" class="card"><label>Quelle<select id="kind"><option value="">Alle</option><option value="router">FRITZ!Box</option><option value="query">Abfragefehler</option><option value="recovery">Wiederhergestellt</option></select></label><label>Verfahren<select id="backend"><option value="">Alle</option><option>soap</option><option>lua</option><option>api</option><option>archive</option></select></label><label>Ab Beobachtung<input id="from" type="datetime-local"></label><label>Bis Beobachtung<input id="to" type="datetime-local"></label><label>Suche<input id="q" maxlength="256" placeholder="Meldung, Quelle oder Metrik"></label><button>Anzeigen</button><button type="button" id="logout">Schließen</button></form>
 <div class="card" id="status" role="status"></div><div class="card"><div class="scroll"><table><thead><tr><th>Ereignis / Beobachtung</th><th>Quelle</th><th>Meldung</th><th>Anzahl / Status</th></tr></thead><tbody id="rows"></tbody></table></div><div class="nav"><button id="prev">Zurück</button><span id="position"></span><button id="next">Weitere</button></div><p class="hint">Zeiten in der Zeitzone dieses Browsers. Router-Originalzeit zusätzlich angegeben. Filter und Sortierung verwenden die letzte Beobachtung; wiederholte Fehler werden zusammengefasst. Bereits in der Box zusammengefasste Meldungen bleiben als Text erhalten.</p></div></section></main>
 <script>
+const requiresToken=/*ARCHIVE_AUTH*/true;
 let secret='',offset=0;const el=id=>document.getElementById(id);const date=s=>s?new Date(s).toLocaleString():'–';
 async function load(){
  const p=new URLSearchParams({limit:'200',offset:String(offset)});for(const k of ['kind','backend','q'])if(el(k).value)p.set(k,el(k).value);for(const k of ['from','to'])if(el(k).value)p.set(k,new Date(el(k).value).toISOString());
@@ -18,4 +19,5 @@ async function load(){
  }catch(e){el('status').textContent=e.message;el('rows').replaceChildren()}
 }
 el('login').onsubmit=e=>{e.preventDefault();secret=el('token').value;el('token').value='';el('login').hidden=true;el('archive').hidden=false;load()};el('filters').onsubmit=e=>{e.preventDefault();offset=0;load()};el('prev').onclick=()=>{offset=Math.max(0,offset-200);load()};el('next').onclick=()=>{offset+=200;load()};el('logout').onclick=()=>{secret='';el('rows').replaceChildren();el('archive').hidden=true;el('login').hidden=false};
+if(!requiresToken){el('login').hidden=true;el('archive').hidden=false;el('logout').hidden=true;load()}
 </script></html>

@@ -40,7 +40,7 @@ func (a *archive) page(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'")
-	w.Write([]byte(archiveHTML))
+	w.Write([]byte(strings.Replace(archiveHTML, "/*ARCHIVE_AUTH*/true", strconv.FormatBool(a.token != ""), 1)))
 }
 func (a *archive) events(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
@@ -50,7 +50,7 @@ func (a *archive) events(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if subtle.ConstantTimeCompare([]byte(token), []byte(a.token)) != 1 {
+	if a.token != "" && subtle.ConstantTimeCompare([]byte(token), []byte(a.token)) != 1 {
 		http.Error(w, "archive token required", 401)
 		return
 	}

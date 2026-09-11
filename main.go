@@ -60,7 +60,7 @@ var (
 	flagGatewayLuaURL    = flag.String("gateway-luaurl", "http://fritz.box", "The URL of the FRITZ!Box UI")
 	flagUsername         = flag.String("username", "", "The user for the FRITZ!Box UPnP service")
 	flagPassword         = flag.String("password", "", "The password for the FRITZ!Box UPnP service")
-	flagSessionApi       = flag.String("sessionapi", "v1", "Use the v1 md5 authentication (default) or the v2 pbkdf2 authentication")
+	flagSessionApi       = flag.String("sessionapi", "v2", "Web login protocol: v2 PBKDF2 (default), or v1 MD5 for older FRITZ!OS")
 	flagGatewayVerifyTLS = flag.Bool("verifyTls", false, "Verify the tls connection when connecting to the FRITZ!Box")
 	flagLogLevel         = flag.String("log-level", "info", "The logging level. Can be error, warn, info, debug or trace")
 )
