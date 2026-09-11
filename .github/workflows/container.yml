@@ -2,7 +2,7 @@ name: DockerHub ARM64
 
 on:
   push:
-    tags: ['api-v0-*']
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
   workflow_dispatch:
 
 permissions:
@@ -39,7 +39,7 @@ jobs:
           tag="sha-${COMMIT}"
           if [ "$REF_TYPE" = tag ]; then tag="$REF_NAME"; fi
           echo "name=senecaiii/fritzbox_exporter:${tag}" >> "$GITHUB_OUTPUT"
-      - name: Build ARM64 test image
+      - name: Build ARM64 release image
         uses: docker/build-push-action@v6
         with:
           context: .

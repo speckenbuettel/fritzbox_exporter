@@ -25,6 +25,22 @@ Other changes:
 - support to use results like hostname or MAC address as labels to metrics
 - support for metrics from lua APIs (e.g. CPU temperature, utilization, ...)
 
+## Versioned ARM64 image (this fork)
+
+Use `senecaiii/fritzbox_exporter:v1.1.0` for the current release.
+Release images use `vMAJOR.MINOR.PATCH` tags instead of the former
+`api-v0-testN` tags. Pin a version for reproducible updates and rollbacks;
+the old `latest` tag is not updated by this release workflow.
+
+Version 1.1.0 recovers API authentication after a FRITZ!Box restart, including
+FRITZ!OS returning HTTP 400 for an expired session. The exporter verifies
+the SID before reauthenticating and retries the read once within the existing
+collection timeout. Transport failures discard the old API session and cache;
+the next request can log in again. A normal provider reconnection does not
+require a new login while the local router session remains valid.
+Metrics files, environment variables, ports and the SQLite archive schema
+remain compatible with api-v0-test9. No new environment variables are needed.
+
 ## Building
 
 ```bash

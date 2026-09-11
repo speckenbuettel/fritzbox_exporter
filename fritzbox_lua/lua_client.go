@@ -116,11 +116,15 @@ func (lua *LuaSession) v1Login(response string) error {
 func (lua *LuaSession) doLogin(req *http.Request) error {
 	resp, err := lua.Client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error calling login_sid.lua: %s", err.Error())
+		return fmt.Errorf("error calling login_sid.lua: %w", RequestCause(err))
 	}
 
 	defer resp.Body.Close()
-	dec := xml.NewDecoder(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("login_sid.lua: HTTP %d", resp.StatusCode)
+	}
+	lua.SessionInfo = SessionInfo{}
+	dec := xml.NewDecoder(io.LimitReader(resp.Body, 64*1024))
 
 	err = dec.Decode(&lua.SessionInfo)
 	if err != nil {
@@ -144,10 +148,14 @@ func (lua *LuaSession) initLogin() error {
 
 	resp, err := lua.Client.Get(fmt.Sprintf("%s/login_sid.lua%s", lua.BaseURL, version))
 	if err != nil {
-		return fmt.Errorf("error calling login_sid.lua: %s", err.Error())
+		return fmt.Errorf("error calling login_sid.lua: %w", RequestCause(err))
 	}
 	defer resp.Body.Close()
-	dec := xml.NewDecoder(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("login_sid.lua: HTTP %d", resp.StatusCode)
+	}
+	lua.SessionInfo = SessionInfo{}
+	dec := xml.NewDecoder(io.LimitReader(resp.Body, 64*1024))
 
 	err = dec.Decode(&lua.SessionInfo)
 	if err != nil {
@@ -172,6 +180,8 @@ func (lmvDef *LuaMetricValueDefinition) createValue(name string, value float64) 
 
 // Login perform loing and get SID
 func (lua *LuaSession) Login() error {
+	lua.SID = ""
+	lua.SessionInfo = SessionInfo{}
 	err := lua.initLogin()
 	if err != nil {
 		return err
@@ -205,6 +215,47 @@ func (lua *LuaSession) Login() error {
 	lua.SID = sid
 
 	return nil
+}
+
+// RequestCause retains the transport cause without a URL containing a SID
+// or a v1 login challenge response.
+func RequestCause(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return urlErr.Err
+	}
+	return err
+}
+
+// ValidSID checks the existing session without creating another login.
+// Callers decide whether to retry; this method never mutates the session.
+func (lua *LuaSession) ValidSID() (bool, error) {
+	if lua.SID == "" {
+		return false, nil
+	}
+	q := url.Values{"sid": {lua.SID}}
+	if lua.ApiVer == "v2" {
+		q.Set("version", "2")
+	}
+	resp, err := lua.Client.Get(lua.BaseURL + "/login_sid.lua?" + q.Encode())
+	if err != nil {
+		return false, fmt.Errorf("login_sid.lua session check: %w", RequestCause(err))
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("login_sid.lua session check: HTTP %d", resp.StatusCode)
+	}
+	var info struct {
+		XMLName xml.Name `xml:"SessionInfo"`
+		SID     string   `xml:"SID"`
+	}
+	if err := xml.NewDecoder(io.LimitReader(resp.Body, 64*1024)).Decode(&info); err != nil {
+		return false, fmt.Errorf("invalid session check response")
+	}
+	if info.SID == "" {
+		return false, fmt.Errorf("session check response has no SID")
+	}
+	return info.SID == lua.SID && info.SID != "0000000000000000", nil
 }
 
 // LoadData load a lua bage and return content

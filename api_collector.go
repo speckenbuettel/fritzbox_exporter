@@ -126,11 +126,17 @@ func apiEndpoint(path, params string) (string, error) {
 	return endpoint, nil
 }
 
+func (c *APICollector) invalidateSession() {
+	c.session.SID = ""
+	// Do not retain cached results from the previous router session.
+	clear(c.cache)
+}
+
 func (c *APICollector) load(endpoint string) (map[string]interface{}, error) {
 	for attempt := 0; attempt < 2; attempt++ {
 		if c.session.SID == "" {
 			if err := c.session.Login(); err != nil {
-				return nil, fmt.Errorf("API login failed")
+				return nil, fmt.Errorf("API login failed: %w", err)
 			}
 		}
 		req, err := http.NewRequest(http.MethodGet, c.session.BaseURL+endpoint, nil)
@@ -143,12 +149,25 @@ func (c *APICollector) load(endpoint string) (map[string]interface{}, error) {
 		req.Header.Set("Accept", "application/json")
 		resp, err := c.session.Client.Do(req)
 		if err != nil {
-			return nil, fmt.Errorf("API request failed")
+			c.invalidateSession()
+			return nil, fmt.Errorf("API request failed: %w", lua.RequestCause(err))
 		}
 		b, readErr := io.ReadAll(io.LimitReader(resp.Body, 8*1024*1024+1))
 		resp.Body.Close()
-		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			c.session.SID = ""
+		// FRITZ!OS may report an expired SID as 400 after a router reboot.
+		// Confirm that the SID is invalid; a genuine bad request must not
+		// trigger a login loop or be hidden by an authentication error.
+		invalidSID := resp.StatusCode == 401 || resp.StatusCode == 403
+		if resp.StatusCode == http.StatusBadRequest && attempt == 0 {
+			valid, err := c.session.ValidSID()
+			if err != nil {
+				c.invalidateSession()
+				return nil, fmt.Errorf("API HTTP status 400; session check failed: %w", err)
+			}
+			invalidSID = !valid
+		}
+		if invalidSID {
+			c.invalidateSession()
 			if attempt == 0 {
 				continue
 			}
