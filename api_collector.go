@@ -186,6 +186,7 @@ func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 	// Also memoize failures for this scrape, avoiding repeated requests/logins.
 	results := make(map[string]map[string]interface{})
 	seen := make(map[string]bool)
+	requestErrors := map[string]error{}
 	for i, m := range c.metrics {
 		c.diagnostics.begin("api", i, m.Path, m.PromDesc.FqName)
 		if ctx.Err() != nil {
@@ -203,6 +204,7 @@ func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 				data, err = c.load(endpoint)
 				if err != nil {
 					c.errors.Inc()
+					requestErrors[endpoint] = err
 					logrus.Warnf("API %s: %s", m.Path, err)
 				} else {
 					ttl := m.CacheEntryTTL
@@ -218,13 +220,13 @@ func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 			results[endpoint] = data
 		}
 		if data == nil {
-			c.diagnostics.fail("request")
+			c.diagnostics.fail("request", requestErrors[endpoint])
 			continue
 		}
 		values, err := extractAPIMetrics(&c.renames, data, m)
 		if err != nil {
 			c.errors.Inc()
-			c.diagnostics.fail("extract")
+			c.diagnostics.fail("extract", err)
 			logrus.Warnf("API metric %s: value unavailable", m.PromDesc.FqName)
 			continue
 		}
@@ -248,7 +250,7 @@ func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 			seen[key] = true
 			metric, err := prometheus.NewConstMetric(m.Desc, m.MetricType, v.Value, labels...)
 			if err != nil {
-				c.diagnostics.fail("metric")
+				c.diagnostics.fail("metric", err)
 				c.errors.Inc()
 				continue
 			}

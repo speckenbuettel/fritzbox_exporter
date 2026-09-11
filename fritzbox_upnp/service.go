@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // curl http://fritz.box:49000/igddesc.xml
@@ -299,6 +300,7 @@ func (a *Action) createCallHTTPRequest(actionArg *ActionArgument) (*http.Request
 
 // store auth header for reuse
 var authHeader = ""
+var authHeaderMu sync.Mutex
 
 // Call an action with argument if given
 func (a *Action) Call(actionArg *ActionArgument) (Result, error) {
@@ -317,8 +319,11 @@ func (a *Action) CallWithClient(actionArg *ActionArgument, client *http.Client) 
 	}
 
 	// reuse prior authHeader, to avoid unnecessary authentication
-	if authHeader != "" {
-		req.Header.Set("Authorization", authHeader)
+	authHeaderMu.Lock()
+	cachedAuth := authHeader
+	authHeaderMu.Unlock()
+	if cachedAuth != "" {
+		req.Header.Set("Authorization", cachedAuth)
 	}
 
 	// first try call without auth header
@@ -334,17 +339,20 @@ func (a *Action) CallWithClient(actionArg *ActionArgument, client *http.Client) 
 
 		if wwwAuth != "" && a.service.Device.root.Username != "" && a.service.Device.root.Password != "" {
 			// call failed, but we have a password so calculate header and try again
-			authHeader, err = a.getDigestAuthHeader(wwwAuth, a.service.Device.root.Username, a.service.Device.root.Password)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %s", a.Name, err.Error())
+			newAuth, authErr := a.getDigestAuthHeader(wwwAuth, a.service.Device.root.Username, a.service.Device.root.Password)
+			if authErr != nil {
+				return nil, fmt.Errorf("%s: %s", a.Name, authErr.Error())
 			}
+			authHeaderMu.Lock()
+			authHeader = newAuth
+			authHeaderMu.Unlock()
 
 			req, err = a.createCallHTTPRequest(actionArg)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %s", a.Name, err.Error())
 			}
 
-			req.Header.Set("Authorization", authHeader)
+			req.Header.Set("Authorization", newAuth)
 
 			resp, err = client.Do(req)
 

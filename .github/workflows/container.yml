@@ -58,6 +58,19 @@ jobs:
           docker run --rm "$IMAGE" -help 2>&1 | tee /tmp/exporter-help.txt
           grep -q api-metrics-file /tmp/exporter-help.txt
           docker run --rm --entrypoint sh "$IMAGE" -c 'test -s /app/metrics-api.json && test -s /app/metrics-lua.json && test -s /app/metrics.json'
+      - name: Smoke test SQLite archive on ARM64
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+        run: |
+          trap 'docker rm -f archive-smoke >/dev/null 2>&1 || true' EXIT
+          docker run -d --name archive-smoke -e ARCHIVE_FILE=/data/events.db -e ARCHIVE_TOKEN=ci-smoke-test-token -e GATEWAY_URL=http://127.0.0.1:9 -e GATEWAY_LUAURL=http://127.0.0.1 "$IMAGE"
+          for attempt in $(seq 1 15); do
+            if docker exec archive-smoke wget -qO- --header='Authorization: Bearer ci-smoke-test-token' http://127.0.0.1:9042/api/events > /tmp/archive.json; then break; fi
+            sleep 1
+          done
+          grep -q '"events"' /tmp/archive.json
+          docker exec archive-smoke test -s /data/events.db
+          docker stop -t 70 archive-smoke
       - name: Log in to DockerHub
         uses: docker/login-action@v3
         with:

@@ -374,7 +374,7 @@ func (fc *FritzboxCollector) reportMetric(ch chan<- prometheus.Metric, m *Metric
 
 	metric, err := prometheus.NewConstMetric(m.Desc, m.MetricType, floatval, labels...)
 	if err != nil {
-		fc.diagnostics.fail("metric")
+		fc.diagnostics.fail("metric", err)
 		collectErrors.Inc()
 		logrus.Errorf("Can not create metric %s.%s: %s", m.Service, m.Action, err.Error())
 	} else {
@@ -484,7 +484,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 			if err != nil {
 				logrus.Errorf("cannot collect host snapshot: %s", err)
 				collectErrors.Inc()
-				fc.diagnostics.fail("request")
+				fc.diagnostics.fail("request", err)
 				continue
 			}
 			for _, row := range rows {
@@ -504,7 +504,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 				if err != nil {
 					logrus.Warnf("Error getting provider action %s result for %s.%s: %s", aa.ProviderAction, m.Service, m.Action, err.Error())
 					collectErrors.Inc()
-					fc.diagnostics.fail("request")
+					fc.diagnostics.fail("request", err)
 					continue
 				}
 
@@ -527,7 +527,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 				if err != nil {
 					logrus.Warn(err.Error())
 					collectErrors.Inc()
-					fc.diagnostics.fail("request")
+					fc.diagnostics.fail("request", err)
 					continue
 				}
 
@@ -542,7 +542,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 					if err != nil {
 						logrus.Errorf("can not get result for %s: %s", m.Action, err)
 						collectErrors.Inc()
-						fc.diagnostics.fail("request")
+						fc.diagnostics.fail("request", err)
 						continue
 					}
 
@@ -560,7 +560,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 		if err != nil {
 			logrus.Warnf("can not collect metrics: %s", err)
 			collectErrors.Inc()
-			fc.diagnostics.fail("request")
+			fc.diagnostics.fail("request", err)
 			continue
 		}
 
@@ -599,7 +599,7 @@ func (fc *FritzboxCollector) collectLua(ch chan<- prometheus.Metric, dupCache ma
 			if err != nil {
 				logrus.Errorf("Can not load %s for %s.%s: %s", lm.Path, lm.ResultPath, lm.ResultKey, err.Error())
 				luaCollectErrors.Inc()
-				fc.diagnostics.fail("request")
+				fc.diagnostics.fail("request", err)
 				fc.LuaSession.SID = "" // clear SID in case of error, so force reauthentication
 				continue
 			}
@@ -607,7 +607,7 @@ func (fc *FritzboxCollector) collectLua(ch chan<- prometheus.Metric, dupCache ma
 			var data map[string]interface{}
 			data, err = lua.ParseJSON(pageData)
 			if err != nil {
-				fc.diagnostics.fail("json")
+				fc.diagnostics.fail("json", err)
 				logrus.Errorf("Can not parse JSON from %s for %s.%s: %s", lm.Path, lm.ResultPath, lm.ResultKey, err.Error())
 				luaCollectErrors.Inc()
 				fc.LuaSession.SID = "" // clear SID in case of error, so force reauthentication
@@ -626,7 +626,7 @@ func (fc *FritzboxCollector) collectLua(ch chan<- prometheus.Metric, dupCache ma
 		if err != nil {
 			logrus.Errorf("Can not get metric values for %s.%s: %s", lm.ResultPath, lm.ResultKey, err.Error())
 			luaCollectErrors.Inc()
-			fc.diagnostics.fail("extract")
+			fc.diagnostics.fail("extract", err)
 			// A missing data field does not invalidate authentication.
 			cacheEntry.Result = nil // don't use invalid results for cache
 			continue
@@ -672,7 +672,7 @@ func (fc *FritzboxCollector) reportLuaMetric(ch chan<- prometheus.Metric, lm *Lu
 
 	metric, err := prometheus.NewConstMetric(lm.Desc, lm.MetricType, value.Value, labels...)
 	if err != nil {
-		fc.diagnostics.fail("metric")
+		fc.diagnostics.fail("metric", err)
 		luaCollectErrors.Inc()
 		logrus.Errorf("Can not create metric %s.%s: %s", lm.ResultPath, lm.ResultPath, err.Error())
 	} else {
@@ -1024,6 +1024,11 @@ func main() {
 		return
 	}
 
+	stopArchive, err := startEventArchive(collector)
+	if err != nil {
+		logrus.Fatal("cannot open event archive: ", err)
+	}
+	defer stopArchive()
 	go collector.LoadServices()
 
 	prometheus.MustRegister(collector)
@@ -1044,5 +1049,5 @@ func main() {
 	http.HandleFunc("/live", collector.LivenessHandler)
 	logrus.Infof("liveness check available at http://%s/live", *flagAddr)
 
-	logrus.Error(http.ListenAndServe(*flagAddr, nil))
+	serveExporter()
 }

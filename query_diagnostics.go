@@ -33,6 +33,7 @@ func makeQueryDescriptors() map[string]queryDescriptors {
 type queryObservation struct {
 	labels      []string
 	reason      string
+	detail      string
 	count       float64
 	errors      float64
 	lastSuccess float64
@@ -54,13 +55,17 @@ func (d *queryDiagnostics) begin(collector string, index int, source, metric str
 		d.entries[key] = q
 	}
 	q.reason = ""
+	q.detail = ""
 	q.count = 0
 	d.current = q
 	d.pending = append(d.pending, q)
 }
-func (d *queryDiagnostics) fail(reason string) {
+func (d *queryDiagnostics) fail(reason string, detail ...error) {
 	if d.current != nil && d.current.reason == "" {
 		d.current.reason = reason
+		if len(detail) > 0 && detail[0] != nil {
+			d.current.detail = archiveSafe(detail[0].Error())
+		}
 	}
 }
 func (d *queryDiagnostics) emitted() {
@@ -77,7 +82,15 @@ func describeQueries(ch chan<- *prometheus.Desc, collectors ...string) {
 	}
 }
 func (d *queryDiagnostics) collect(ch chan<- prometheus.Metric) {
+	archiveRecords := []archiveRecord{}
 	for _, q := range d.pending {
+		if eventArchive != nil {
+			message := q.detail
+			if message == "" {
+				message = "Abfragefehler: " + q.reason
+			}
+			archiveRecords = append(archiveRecords, archiveRecord{Kind: "query", Backend: q.labels[0], Key: q.labels[1] + "|" + q.labels[2] + "|" + q.labels[3], Source: q.labels[2], Metric: q.labels[3], Reason: q.reason, Message: message, Failed: q.reason != ""})
+		}
 		desc := queryDescs[q.labels[0]]
 		labels := q.labels[1:]
 		success := 1.0
@@ -92,6 +105,9 @@ func (d *queryDiagnostics) collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(desc.results, prometheus.GaugeValue, q.count, labels...)
 		ch <- prometheus.MustNewConstMetric(desc.errors, prometheus.CounterValue, q.errors, labels...)
 		ch <- prometheus.MustNewConstMetric(desc.lastSuccess, prometheus.GaugeValue, q.lastSuccess, labels...)
+	}
+	if eventArchive != nil && len(archiveRecords) > 0 {
+		eventArchive.enqueue(archiveJob{Records: archiveRecords})
 	}
 	d.pending = nil
 	d.current = nil
