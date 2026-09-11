@@ -263,7 +263,7 @@ func (lua *LuaSession) LoadData(page LuaPage) ([]byte, error) {
 		} else if retries < 1 {
 			// unexpected error let's retry (reboot issue ?)
 		} else {
-			return nil, fmt.Errorf("%s failed: %s", page.Path, resp.Status)
+			return nil, fmt.Errorf("Lua response: HTTP %d, Content-Type %q", resp.StatusCode, resp.Header.Get("Content-Type"))
 		}
 
 		retries++
@@ -275,6 +275,9 @@ func (lua *LuaSession) LoadData(page LuaPage) ([]byte, error) {
 		return nil, err
 	}
 
+	if !json.Valid(body) {
+		return nil, fmt.Errorf("Lua response is not valid JSON: HTTP %d, Content-Type %q, bytes %d", resp.StatusCode, resp.Header.Get("Content-Type"), len(body))
+	}
 	return body, nil
 }
 

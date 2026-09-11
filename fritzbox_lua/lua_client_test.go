@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -44,5 +45,20 @@ func TestLuaDataUsesSessionTimeout(t *testing.T) {
 				t.Fatalf("Lua timeout not respected: %v", err)
 			}
 		})
+	}
+}
+
+func TestLuaResponseDiagnostics(t *testing.T) {
+	for _, body := range []string{"<html>private-session-secret</html>", "not-json"} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(w, body)
+		}))
+		session := LuaSession{BaseURL: server.URL, SID: "private-session-secret"}
+		_, err := session.LoadData(LuaPage{Path: "data.lua"})
+		server.Close()
+		if err == nil || !strings.Contains(err.Error(), "HTTP 200") || !strings.Contains(err.Error(), "text/html") || strings.Contains(err.Error(), "private-session-secret") {
+			t.Fatalf("unsafe or incomplete diagnostic: %v", err)
+		}
 	}
 }
