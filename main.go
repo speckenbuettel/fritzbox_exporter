@@ -475,23 +475,6 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 			fc.diagnostics.fail("timeout")
 			continue
 		}
-		if m.Action == "GetGenericHostEntry" && m.ActionArgument != nil && m.ActionArgument.IsIndex && m.ActionArgument.ProviderAction == "GetHostNumberOfEntries" {
-			fresh := *m
-			fresh.CacheEntryTTL = -1 // An indexed list must not mix independently cached generations.
-			rows, err := readHostSnapshot(func(action string, arg *upnp.ActionArgument) (upnp.Result, error) {
-				return fc.getActionResult(&fresh, action, arg)
-			}, m.ActionArgument)
-			if err != nil {
-				logrus.Errorf("cannot collect host snapshot: %s", err)
-				collectErrors.Inc()
-				fc.diagnostics.fail("request", err)
-				continue
-			}
-			for _, row := range rows {
-				fc.reportMetric(ch, m, row, dupCache)
-			}
-			continue
-		}
 		var actArg *upnp.ActionArgument
 		if m.ActionArgument != nil {
 			aa := m.ActionArgument

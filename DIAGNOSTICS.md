@@ -116,3 +116,7 @@ For the remote 4040 with a Prometheus scrape timeout of 55s, set COLLECTION_TIME
 When the budget expires, active HTTP requests are cancelled and remaining definitions are marked with query_error reason="timeout". Individual request failures continue to use reason="request". Existing successful samples from earlier in a partial collection may still be returned; inspect query_success. Collection timeouts are counted by fritzbox_exporter_collection_timeouts_total{backend="soap_lua"|"api"}. A simultaneous /metrics request gets HTTP 503 immediately and increments fritzbox_exporter_scrapes_rejected_total. There is no queue. Prometheus marks a rejected scrape as up=0.
 
 A disconnected Prometheus client does not directly cancel the collector: its independent finite budget remains in force. This applies to metrics collection; service discovery at startup is separate. Counters may be observed on the following scrape because registry collectors are gathered concurrently.
+
+## Indexed host collection
+
+Host enumeration uses the configured cacheEntryTTL, as in sberk42. A failed index is reported but does not discard successful hosts or prevent reading later indexes. Query success remains zero for a partial result; counts derived from such a list may undercount. Cached entries may represent different update times. The collection budget remains enforced. The former uncached, all-or-nothing host snapshot path has been removed.
