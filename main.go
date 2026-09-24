@@ -349,7 +349,7 @@ func (fc *FritzboxCollector) reportMetric(ch chan<- prometheus.Metric, m *Metric
 		} else {
 			lval, ok := result[l]
 			if !ok {
-				logrus.Warnf("%s.%s has no resul for label %s", m.Service, m.Action, l)
+				logrus.Warnf("%s.%s has no result for label %s", m.Service, m.Action, l)
 				lval = ""
 			}
 
@@ -514,6 +514,12 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 					continue
 				}
 
+				started := time.Now()
+				countAge := int64(-1)
+				if entry := upnpCache[m.Service+"|"+aa.ProviderAction]; entry != nil && entry.Result != nil {
+					countAge = time.Now().Unix() - entry.Timestamp
+				}
+				firstInvalidIndex := -1
 				for i := 0; i < count; i++ {
 					if ctx.Err() != nil {
 						fc.diagnostics.fail("timeout")
@@ -523,13 +529,23 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 					result, err := fc.getActionResult(m, m.Action, actArg)
 
 					if err != nil {
-						logrus.Errorf("can not get result for %s: %s", m.Action, err)
+						logrus.WithFields(logrus.Fields{
+							"gateway": fc.Gateway, "service": m.Service, "action": m.Action,
+							"index": i, "count": count, "count_age_seconds": countAge,
+							"cache_ttl_seconds": m.CacheEntryTTL,
+						}).Errorf("can not get indexed result: %s", err)
+						if firstInvalidIndex < 0 && m.Action == "GetGenericHostEntry" && strings.Contains(err.Error(), "UPnPError 713 (") {
+							firstInvalidIndex = i
+						}
 						collectErrors.Inc()
 						fc.diagnostics.fail("request", err)
 						continue
 					}
 
 					fc.reportMetric(ch, m, result, dupCache)
+				}
+				if firstInvalidIndex >= 0 && aa.ProviderAction != "" {
+					fc.logHostCountCheck(m, firstInvalidIndex, count, countAge, started)
 				}
 
 				continue
@@ -630,7 +646,7 @@ func (fc *FritzboxCollector) reportLuaMetric(ch chan<- prometheus.Metric, lm *Lu
 		} else {
 			lval, ok := value.Labels[l]
 			if !ok {
-				logrus.Warnf("%s.%s from %s?%s has no resul for label %s", lm.ResultPath, lm.ResultKey, lm.Path, lm.Params, l)
+				logrus.Warnf("%s.%s from %s?%s has no result for label %s", lm.ResultPath, lm.ResultKey, lm.Path, lm.Params, l)
 				lval = ""
 			}
 

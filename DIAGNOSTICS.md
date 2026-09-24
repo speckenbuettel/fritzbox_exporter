@@ -120,3 +120,12 @@ A disconnected Prometheus client does not directly cancel the collector: its ind
 ## Indexed host collection
 
 Host enumeration uses the configured cacheEntryTTL, as in sberk42. A failed index is reported but does not discard successful hosts or prevent reading later indexes. Query success remains zero for a partial result; counts derived from such a list may undercount. Cached entries may represent different update times. The collection budget remains enforced. The former uncached, all-or-nothing host snapshot path has been removed.
+
+Indexed errors include gateway, service, action, zero-based index, loop count,
+configured TTL and the age of the count cache entry at enumeration start (-1 if
+unavailable). After GetGenericHostEntry returns UPnP error 713, one uncached count
+recheck per enumeration is logged with the first failed index and elapsed time.
+The recheck runs after enumeration, uses the remaining collection budget, and
+never updates the cache or loop limit. `fresh_count` is a later observation, not
+an atomic snapshot; `recheck_error` explains an unavailable comparison. This
+extra request occurs only after error 713. No host addresses or credentials are logged.

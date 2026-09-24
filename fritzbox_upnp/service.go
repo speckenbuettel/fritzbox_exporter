@@ -385,9 +385,9 @@ func (a *Action) CallWithClient(actionArg *ActionArgument, client *http.Client) 
 				if soapFault.FaultString == "UPnPError" {
 					upe := soapFault.Detail.UpnpError
 
-					errMsg = fmt.Sprintf("SAOPFault: %s %d (%s)", soapFault.FaultString, upe.ErrorCode, upe.ErrorDescription)
+					errMsg = fmt.Sprintf("SOAPFault: %s %d (%s)", soapFault.FaultString, upe.ErrorCode, upe.ErrorDescription)
 				} else {
-					errMsg = fmt.Sprintf("SAOPFault: %s", soapFault.FaultString)
+					errMsg = fmt.Sprintf("SOAPFault: %s", soapFault.FaultString)
 				}
 			}
 		}
