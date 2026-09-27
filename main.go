@@ -520,12 +520,14 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 					countAge = time.Now().Unix() - entry.Timestamp
 				}
 				firstInvalidIndex := -1
+				seenHosts := make(map[string]hostReadDiagnostic)
 				for i := 0; i < count; i++ {
 					if ctx.Err() != nil {
 						fc.diagnostics.fail("timeout")
 						break
 					}
 					actArg = &upnp.ActionArgument{Name: aa.Name, Value: i}
+					hostRead := hostReadBeforeCall(m, actArg, time.Now().Unix())
 					result, err := fc.getActionResult(m, m.Action, actArg)
 
 					if err != nil {
@@ -542,6 +544,9 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 						continue
 					}
 
+					if m.Action == "GetGenericHostEntry" {
+						fc.logDuplicateHost(m, result, i, count, countAge, hostRead, seenHosts)
+					}
 					fc.reportMetric(ch, m, result, dupCache)
 				}
 				if firstInvalidIndex >= 0 && aa.ProviderAction != "" {

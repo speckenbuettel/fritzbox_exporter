@@ -129,3 +129,9 @@ The recheck runs after enumeration, uses the remaining collection budget, and
 never updates the cache or loop limit. `fresh_count` is a later observation, not
 an atomic snapshot; `recheck_error` explains an unavailable comparison. This
 extra request occurs only after error 713. No host addresses or credentials are logged.
+
+The test image also logs duplicate host label sets at warning level, including
+the first and duplicate indexes and their pre-lookup cache ages and sources
+(cache/network). Age -1 means no cached result; a network read with a nonnegative
+age had an expired cached result. Host identity values are not logged. This
+diagnostic leaves enumeration, cache policy and duplicate suppression unchanged.

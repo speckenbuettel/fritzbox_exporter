@@ -38,3 +38,45 @@ func TestHostCountDiagnosticPreservesCacheOnExpiredBudget(t *testing.T) {
 		t.Fatal("diagnostic changed cache")
 	}
 }
+
+func TestDuplicateHostDiagnosticSources(t *testing.T) {
+	old := upnpCache
+	defer func() { upnpCache = old }()
+	const service = "hosts"
+	row := upnp.Result{"HostName": "Host", "MACAddress": "AA", "Active": uint64(1)}
+	upnpCache = map[string]*upnpCacheEntry{service + "|GetGenericHostEntry|NewIndex|0": {Timestamp: 100, Result: &row}}
+	m := &Metric{Service: service, Action: "GetGenericHostEntry", CacheEntryTTL: 60, PromDesc: JSONPromDesc{FqName: "gateway_hosts", VarLabels: []string{"gateway", "HostName", "MACAddress"}}}
+	a := &upnp.ActionArgument{Name: "NewIndex", Value: 0}
+	first := hostReadBeforeCall(m, a, 160)
+	if first.Source != "cache" || first.Age != 60 {
+		t.Fatalf("boundary: %+v", first)
+	}
+	expired := hostReadBeforeCall(m, a, 161)
+	if expired.Source != "network" || expired.Age != 61 {
+		t.Fatalf("expired: %+v", expired)
+	}
+	a.Value = 1
+	second := hostReadBeforeCall(m, a, 160)
+	if second.Source != "network" || second.Age != -1 {
+		t.Fatalf("missing: %+v", second)
+	}
+	logger := logrus.StandardLogger()
+	oldHooks := logger.ReplaceHooks(make(logrus.LevelHooks))
+	defer logger.ReplaceHooks(oldHooks)
+	hook := logtest.NewGlobal()
+	fc := &FritzboxCollector{Gateway: "test"}
+	seen := make(map[string]hostReadDiagnostic)
+	fc.logDuplicateHost(m, row, 0, 32, 0, first, seen)
+	if hook.LastEntry() != nil {
+		t.Fatal("first row logged as duplicate")
+	}
+	normalized := upnp.Result{"HostName": "host", "MACAddress": "aa", "Active": uint64(0)}
+	fc.logDuplicateHost(m, normalized, 1, 32, 0, second, seen)
+	event := hook.LastEntry()
+	if event == nil || event.Data["first_index"] != 0 || event.Data["duplicate_index"] != 1 || event.Data["first_source"] != "cache" || event.Data["duplicate_source"] != "network" {
+		t.Fatalf("unexpected: %+v", event)
+	}
+	if len(seen) != 1 || upnpCache[service+"|GetGenericHostEntry|NewIndex|0"].Timestamp != 100 {
+		t.Fatal("diagnostic mutated state")
+	}
+}
