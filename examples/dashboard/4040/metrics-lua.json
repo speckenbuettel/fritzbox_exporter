@@ -37,11 +37,14 @@
       "resultKey": "connected",
       "okValue": "true",
       "promDesc": {
-        "fqName": "gateway_vpn_bridge",
-        "help": "status of IPSec VPN connection from data.lua?page=shareVpn (1 = connected)",
+        "fqName": "gateway_vpn_ipsec_status",
+        "help": "status of IPSec VPN connections (1 = connected)",
         "varLabels": [
           "gateway",
-          "name"
+          "name",
+          "localNet",
+          "remoteNet",
+          "remoteIP"
         ]
       },
       "promType": "GaugeValue",
@@ -55,11 +58,13 @@
       "resultKey": "connected",
       "okValue": "true",
       "promDesc": {
-        "fqName": "gateway_vpn_wireguard",
-        "help": "status of Wireguard VPN connections from data.lua?page=shareWireguard (1 = connected)",
+        "fqName": "gateway_vpn_wireguard_status",
+        "help": "status of Wireguard VPN connections (1 = connected)",
         "varLabels": [
           "gateway",
           "name",
+          "localNet",
+          "remoteNet",
           "remoteIp"
         ]
       },
@@ -73,8 +78,8 @@
       "resultPath": "data.cputemp.series.0",
       "resultKey": "-1",
       "promDesc": {
-        "fqName": "gateway_data_ecostat_cputemp",
-        "help": "cpu temperature from data.lua?page=ecoStat",
+        "fqName": "gateway_system_cpu_temperature_celsius",
+        "help": "system CPU temperature (deg Celsius)",
         "varLabels": [
           "gateway"
         ]
@@ -88,8 +93,8 @@
       "resultPath": "data.cpuutil.series.0",
       "resultKey": "-1",
       "promDesc": {
-        "fqName": "gateway_data_ecostat_cpuutil",
-        "help": "percentage of cpu utilization from data.lua?page=ecoStat",
+        "fqName": "gateway_system_cpu_utilization_percent",
+        "help": "system CPU utilization (percent)",
         "varLabels": [
           "gateway"
         ]
@@ -103,8 +108,8 @@
       "resultPath": "data.ramusage.series.0",
       "resultKey": "-1",
       "promDesc": {
-        "fqName": "gateway_data_ecostat_ramusage",
-        "help": "percentage of RAM utilization from data.lua?page=ecoStat",
+        "fqName": "gateway_system_ram_utilization_percent",
+        "help": "system RAM utilization (percent)",
         "varLabels": [
           "gateway"
         ],
@@ -121,8 +126,8 @@
       "resultPath": "data.ramusage.series.1",
       "resultKey": "-1",
       "promDesc": {
-        "fqName": "gateway_data_ecostat_ramusage",
-        "help": "percentage of RAM utilization from data.lua?page=ecoStat",
+        "fqName": "gateway_system_ram_utilization_percent",
+        "help": "system RAM utilization (percent)",
         "varLabels": [
           "gateway"
         ],
@@ -139,8 +144,8 @@
       "resultPath": "data.ramusage.series.2",
       "resultKey": "-1",
       "promDesc": {
-        "fqName": "gateway_data_ecostat_ramusage",
-        "help": "percentage of RAM utilization from data.lua?page=ecoStat",
+        "fqName": "gateway_system_ram_utilization_percent",
+        "help": "system RAM utilization (percent)",
         "varLabels": [
           "gateway"
         ],
@@ -157,8 +162,8 @@
       "resultPath": "data.drain.*",
       "resultKey": "actPerc",
       "promDesc": {
-        "fqName": "gateway_data_energy_consumption",
-        "help": "percentage of energy consumption from data.lua?page=energy",
+        "fqName": "gateway_system_energy_consumption_percent",
+        "help": "system energy consumption (percent)",
         "varLabels": [
           "gateway",
           "name"
@@ -174,8 +179,8 @@
       "resultKey": "class",
       "okValue": "green",
       "promDesc": {
-        "fqName": "gateway_lan",
-        "help": "status of LAN connection from data.lua?page=energy (1 = up)",
+        "fqName": "gateway_lan_status",
+        "help": "status of LAN connections (1 = up)",
         "varLabels": [
           "gateway",
           "name"
@@ -190,8 +195,8 @@
       "resultPath": "data.usbOverview.devices.*",
       "resultKey": "partitions.0.totalStorageInBytes",
       "promDesc": {
-        "fqName": "gateway_data_storage_total",
-        "help": "total storage in bytes from data.lua?page=usb",
+        "fqName": "gateway_system_storage_total_bytes",
+        "help": "system total storage (bytes)",
         "varLabels": [
           "gateway",
           "deviceType",
@@ -208,8 +213,8 @@
       "resultPath": "data.usbOverview.devices.*",
       "resultKey": "partitions.0.usedStorageInBytes",
       "promDesc": {
-        "fqName": "gateway_data_storage_used",
-        "help": "used storage in bytes from data.lua?page=usb",
+        "fqName": "gateway_system_storage_used_bytes",
+        "help": "system used storage (bytes)",
         "varLabels": [
           "gateway",
           "deviceType",
@@ -218,6 +223,90 @@
       },
       "promType": "GaugeValue",
       "cacheEntryTTL": 300,
+      "allowEmpty": true
+    },
+    {
+      "path": "data.lua",
+      "params": "page=shareVpn",
+      "resultPath": "data.init.boxConnections.*",
+      "resultKey": "active",
+      "okValue": "true",
+      "promDesc": {
+        "fqName": "gateway_vpn_connection_enabled",
+        "help": "VPN connection enabled (1 = enabled)",
+        "varLabels": [
+          "gateway",
+          "name"
+        ],
+        "fixedLabels": {
+          "protocol": "IPsec"
+        }
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "allowEmpty": true
+    },
+    {
+      "path": "data.lua",
+      "params": "page=shareVpn",
+      "resultPath": "data.init.boxConnections.*",
+      "resultKey": "connected",
+      "okValue": "true",
+      "promDesc": {
+        "fqName": "gateway_vpn_connection_status",
+        "help": "VPN connection status (1 = connected)",
+        "varLabels": [
+          "gateway",
+          "name"
+        ],
+        "fixedLabels": {
+          "protocol": "IPsec"
+        }
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "allowEmpty": true
+    },
+    {
+      "path": "data.lua",
+      "params": "page=shareWireguard",
+      "resultPath": "data.init.boxConnections.*",
+      "resultKey": "active",
+      "okValue": "true",
+      "promDesc": {
+        "fqName": "gateway_vpn_connection_enabled",
+        "help": "VPN connection enabled (1 = enabled)",
+        "varLabels": [
+          "gateway",
+          "name"
+        ],
+        "fixedLabels": {
+          "protocol": "Wireguard"
+        }
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
+      "allowEmpty": true
+    },
+    {
+      "path": "data.lua",
+      "params": "page=shareWireguard",
+      "resultPath": "data.init.boxConnections.*",
+      "resultKey": "connected",
+      "okValue": "true",
+      "promDesc": {
+        "fqName": "gateway_vpn_connection_status",
+        "help": "VPN connection status (1 = connected)",
+        "varLabels": [
+          "gateway",
+          "name"
+        ],
+        "fixedLabels": {
+          "protocol": "Wireguard"
+        }
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60,
       "allowEmpty": true
     }
   ]

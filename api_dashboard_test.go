@@ -11,12 +11,14 @@ import (
 
 func TestDashboardAPIConfiguration(t *testing.T) {
 	fixtures := map[string]interface{}{
-		"generic/cpu":       map[string]interface{}{"StatTemperature": "52,51", "StatCPU": "15,14", "StatRAMStrictlyUsed": "39,38", "StatRAMCacheUsed": "40,41", "StatRAMPhysFree": "21,21"},
-		"generic/vpn":       map[string]interface{}{"connection": []interface{}{map[string]interface{}{"name": "IPsec", "access_type": "3", "state": "ready", "activated": "1"}, map[string]interface{}{"name": "WireGuard", "access_type": "4", "state": "not active", "activated": "1"}}},
-		"generic/power":     map[string]interface{}{"rate_sumact": "38", "rate_systemact": "71", "rate_wlanact": "50", "rate_abact": "0", "rate_usbhostact": "0"},
-		"generic/eth_ports": map[string]interface{}{"eth": []interface{}{map[string]interface{}{"label": "LAN:1", "carrier": "1"}}},
-		"generic/dect":      map[string]interface{}{"enabled": "0"},
-		"storage":           map[string]interface{}{"internalStorage": map[string]interface{}{"capacity": 1000, "usedSpace": 100}, "externalStorages": []interface{}{}},
+		"generic/connections": map[string]interface{}{"connection": []interface{}{map[string]interface{}{"is_active_internet_connection": "1", "media_type": "Fiber", "ip6_connstatus": "connected", "ip6_addr": "2001:db8::1", "ip6_prefix": "2001:db8::/64"}}},
+		"generic/plc":         map[string]interface{}{"device": []interface{}{map[string]interface{}{"isLocal": "0", "mac": "02:00:00:00:00:01", "usr": "example-adapter", "model": "example-model", "phyRateRX": 300, "phyRateTX": 200}}},
+		"generic/cpu":         map[string]interface{}{"StatTemperature": "52,51", "StatCPU": "15,14", "StatRAMStrictlyUsed": "39,38", "StatRAMCacheUsed": "40,41", "StatRAMPhysFree": "21,21"},
+		"generic/vpn":         map[string]interface{}{"connection": []interface{}{map[string]interface{}{"name": "IPsec", "access_type": "3", "state": "ready", "activated": "1", "display_local_net": "example-local", "display_remote_net": "example-remote", "remote_ip": ""}, map[string]interface{}{"name": "WireGuard", "access_type": "4", "state": "not active", "activated": "1", "display_local_net": "example-local", "display_remote_net": "example-remote", "remote_ip": ""}}},
+		"generic/power":       map[string]interface{}{"rate_sumact": "38", "rate_systemact": "71", "rate_wlanact": "50", "rate_abact": "0", "rate_usbhostact": "0"},
+		"generic/eth_ports":   map[string]interface{}{"eth": []interface{}{map[string]interface{}{"label": "LAN:1", "carrier": "1"}}},
+		"generic/dect":        map[string]interface{}{"enabled": "0"},
+		"storage":             map[string]interface{}{"internalStorage": map[string]interface{}{"capacity": 1000, "usedSpace": 100}, "externalStorages": []interface{}{}},
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		obj, ok := fixtures[r.URL.Path[len("/api/v0/"):]]
@@ -40,16 +42,26 @@ func TestDashboardAPIConfiguration(t *testing.T) {
 		if e != nil {
 			t.Fatal(e)
 		}
+		seenStorage, seenVPN := false, false
 		for _, family := range families {
 			if family.GetName() == "fritzbox_exporter_query_error" {
 				t.Errorf("configuration errors: %v", family)
 			}
-			if family.GetName() == "gateway_data_storage_total" && len(family.Metric) != wantStorage {
-				t.Errorf("storage samples = %d", len(family.Metric))
+			if family.GetName() == "gateway_system_storage_total_bytes" {
+				seenStorage = true
+				if len(family.Metric) != wantStorage {
+					t.Errorf("storage samples = %d", len(family.Metric))
+				}
 			}
-			if family.GetName() == "gateway_vpn_wireguard" && (len(family.Metric) != 1 || family.Metric[0].Gauge.GetValue() != 0) {
-				t.Error("VPN type filtering failed")
+			if family.GetName() == "gateway_vpn_wireguard_status" {
+				seenVPN = true
+				if len(family.Metric) != 1 || family.Metric[0].Gauge.GetValue() != 0 {
+					t.Error("VPN type filtering failed")
+				}
 			}
+		}
+		if !seenStorage || !seenVPN {
+			t.Fatal("expected profile metrics missing")
 		}
 	}
 	check(1)

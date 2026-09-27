@@ -1,56 +1,75 @@
-# Dashboard configurations
+# Router configuration examples
 
-These configurations were checked read-only against a FRITZ!Box 5690 with
-8.40-136122 BETA and a FRITZ!Box 4040 with 8.03. Use the files for the matching
-model/firmware, not a universal combined configuration. The router configurations
-are PPPoE over direct fibre (5690) and Ethernet WAN (4040).
+These six JSON files are derived from the supplied September 2026 configuration
+backups. They contain extraction rules, not router response snapshots; no router
+addresses, passwords, session IDs, MAC addresses or private device names are
+required in the files. Set credentials and gateway URLs through environment
+variables. Private fields named in `varLabels` are extracted at runtime: the
+resulting `/metrics` output may still contain private network information.
 
-The files preserve the existing `gateway_*` metric names and dashboard labels.
-Source priority is SOAP, then API, then legacy Lua. The 5690 has an empty Lua
-configuration; the 4040 has an empty API configuration. Keep the three files
-separate per container. API transforms require api-v0-test3 or newer.
+| Model | Firmware reference | SOAP definitions | Lua definitions | API definitions |
+| --- | --- | ---: | ---: | ---: |
+| 5690 (not Pro), direct GPON | 8.40; initially validated on 8.40-136122 BETA | 40 | 7 | 26 |
+| 4040, Ethernet WAN | 8.03 | 34 | 15 | 0 |
 
-5690 changes: WAN IP/MAC/error/status/uptime through WANPPPConnection instead of
-the unavailable WANIPConnection action; WAN interface labels replace Cable;
-CPU, RAM, energy, physical LAN port status, VPN, DECT base and storage via API.
-The first CPU/RAM series entry is the latest sample, confirmed against the
-reversed Lua series and WebGUI client code. RAM remains percentages, not bytes.
-Energy CPU percentage is energy consumption, not CPU utilization.
+The exact current 5690 build was not independently rechecked for this update.
+Copy all three files from one model into your mounted configuration directory:
 
-VPN gateway_vpn_bridge includes LAN-LAN IPsec (access_type=3).
-gateway_vpn_wireguard includes WireGuard (access_type=4). The filter is required
-because the API returns both protocols in one collection. The API-prefixed VPN
-metrics from earlier test images remain available for compatibility.
+```text
+METRICS_FILE=/config/metrics.json
+LUA_METRICS_FILE=/config/metrics-lua.json
+API_METRICS_FILE=/config/metrics-api.json
+```
 
-4040 changes: retain proven Lua paths, allow empty VPN/USB lists, add optional
-USB metrics, declare WLAN packet counters as CounterValue. The 4040 has no
-internal storage or DECT hardware. No synthetic zero hardware readings are added.
-Its legacy USB definitions retain the existing first-partition extraction; the
-empty case is live tested, attached-device results need a hardware test.
+For the 4040, API_METRICS_FILE can also be omitted. Do not combine the profiles.
+They preserve the installation's metric names and labels; the inherited Grafana
+dashboard must be adapted. See the main [README](../../README.md) for deployment.
 
-The 5690 exports its internal storage plus all external partitions, using the
-storage UID and partition label to distinguish devices. The empty USB case was
-checked live; nonempty and multi-device cases are covered by synthetic tests.
-Actual attached USB devices still need a hardware test.
+## 5690
 
-## Limits
+SOAP supplies device, PPP connection, traffic, fibre counters, WLAN state, hosts,
+DECT and Powerline inventory. API supplies CPU, RAM, energy, Ethernet port state,
+VPN, storage, access type, IPv6 state and Powerline PHY rates. Lua supplies fibre
+optical diagnostics, physical connection state and the latest downstream chart
+sample. The Lua file is no longer empty.
 
-The 5690 firmware returns permanent zero WLAN packet counters. These definitions
-are omitted to avoid presenting false zero traffic. The inspected API and WLAN
-device list expose link speeds, not equivalent traffic counters. The existing
-WLAN Traffic panel therefore remains unavailable for that box.
+Both optical power directions come from `fiberFiber` via Lua in dBm. The fibre
+chart value from `inetOv` uses `values` with index `-1`, already in bytes/second;
+multiply by 8 for bits/second and do not apply `rate()`. It is the latest short
+chart sample, not an average over the entire scrape interval.
 
-Access type remains the actual SOAP value `Other` on the 5690; this is the
-standardized service's response for its fibre connection, not a Cable label.
-The DECT count is additionally available as `gateway_dect_count`; use that in
-the DECT Phones panel to show an explicit zero when no phones are registered.
-DOCSIS metrics are outside the scope of these two non-cable boxes.
+WAN and Fibre traffic counters can describe overlapping Internet traffic; do not
+sum them. Use Fibre for this profile's Internet traffic. Physical GPON rates are
+not the subscribed tariff or measured throughput. `MinutesInShowtime` describes
+physical synchronisation and need not reset on an IP/PPP reconnect.
 
-Prometheus target labels (`device`, `model`, etc.) must continue to be added by
-the existing scrape jobs. The exporter itself only supplies its gateway label.
+Powerline API `isLocal=0` selects remote adapters; this is an API flag, not a
+hostname suffix. PHY rates describe link capacity, not traffic. The adapter's
+`model` label can collide with a Prometheus target label of the same name and
+become `exported_model`. IPsec and WireGuard are selected by `access_type` 3/4;
+API address labels use `remote_ip`. Disconnected peers may have empty addresses.
+WLAN packet counters are omitted because the tested firmware returned zero.
 
-Keep the existing Portainer entrypoint `/app/fritzbox_exporter` and empty CMD.
-Set METRICS_FILE, LUA_METRICS_FILE, API_METRICS_FILE to the three files under the
-appropriate mounted subdirectory, e.g. `/config/5690/metrics-api.json`.
-For the 4040 API_METRICS_FILE may be omitted or point to its empty API file.
-No production container is changed by installing these examples in the repository.
+## 4040
+
+SOAP supplies device/WAN/LAN/WLAN counters and host inventory; Lua supplies CPU,
+RAM, energy, LAN state, USB and VPN data. Use WAN for Internet traffic. The API
+configuration is intentionally empty. Lua IPsec uses `remoteIP`, WireGuard uses
+`remoteIp`; response field names are case-sensitive. USB definitions currently
+select the first partition of each device. Identically named USB devices may
+need additional identifying labels.
+
+Intermittent host index 713 and duplicate-host diagnostics are still under
+investigation. v1.1.2 preserves partial host results and reports count changes;
+v1.1.3-test additionally records duplicate indexes and cache provenance. Neither
+is claimed to fix the underlying cause. Remote connectivity and collection
+budgets must also be considered; do not suppress errors merely to hide them.
+
+## Localisation and maintenance
+
+The label-renaming rules target German WebGUI responses. Review them for other
+languages. API/Lua schemas are not stable contracts across firmware versions.
+Optional empty collections use `allowEmpty` where configured; missing fields are
+not equivalent to valid empty lists. Review definitions after firmware updates.
+The generic root defaults are retained for compatibility, but the supported
+example profiles in this directory are the recommended starting point.

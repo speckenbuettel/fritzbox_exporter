@@ -38,7 +38,7 @@
     "result": "ExternalIPAddress",
     "promDesc": {
       "fqName": "gateway_connection_external_ip",
-      "help": "gateway external IP address",
+      "help": "gateway external IPv4 address",
       "varLabels": [
         "gateway",
         "MACAddress",
@@ -54,6 +54,43 @@
     "cacheEntryTTL": 600
   },
   {
+    "service": "urn:dslforum-org:service:WANPPPConnection:1",
+    "action": "GetStatusInfo",
+    "result": "ConnectionStatus",
+    "okValue": "Connected",
+    "promDesc": {
+      "fqName": "gateway_connection_status",
+      "help": "gateway connection status (1 = connected)",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "connection": "IP",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:WANPPPConnection:1",
+    "action": "GetStatusInfo",
+    "result": "Uptime",
+    "promDesc": {
+      "fqName": "gateway_connection_uptime_seconds",
+      "help": "gateway connection uptime (seconds)",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "connection": "IP",
+        "interface": "WAN"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 300
+  },
+  {
     "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
     "action": "GetTotalBytesReceived",
     "result": "TotalBytesReceived",
@@ -65,8 +102,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Bytes",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Bytes"
       }
     },
     "promType": "CounterValue",
@@ -84,8 +121,8 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Bytes",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Bytes"
       }
     },
     "promType": "CounterValue",
@@ -103,8 +140,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Packets",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
@@ -122,8 +159,8 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Packets",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
@@ -141,8 +178,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Bytes",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Bytes"
       }
     },
     "promType": "GaugeValue",
@@ -160,32 +197,12 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Bytes",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Bytes"
       }
     },
     "promType": "GaugeValue",
     "cacheEntryTTL": 60
-  },
-  {
-    "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
-    "action": "GetCommonLinkProperties",
-    "result": "WANAccessType",
-    "okValue": "Cable",
-    "promDesc": {
-      "fqName": "gateway_access_type",
-      "help": "gateway access type (ETHERNET, CABLE, FIBRE, etc.)",
-      "varLabels": [
-        "gateway",
-        "WANAccessType"
-      ],
-      "fixedLabels": {
-        "connection": "Access Type",
-        "interface": "WAN"
-      }
-    },
-    "promType": "GaugeValue",
-    "cacheEntryTTL": 3600
   },
   {
     "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
@@ -212,7 +229,7 @@
     "result": "Layer1DownstreamMaxBitRate",
     "promDesc": {
       "fqName": "gateway_max_bitrate",
-      "help": "max bitrate on gateway interface",
+      "help": "maximum bitrate on gateway interface",
       "varLabels": [
         "gateway"
       ],
@@ -230,7 +247,7 @@
     "result": "Layer1UpstreamMaxBitRate",
     "promDesc": {
       "fqName": "gateway_max_bitrate",
-      "help": "max bitrate on gateway interface",
+      "help": "maximum bitrate on gateway interface",
       "varLabels": [
         "gateway"
       ],
@@ -241,6 +258,189 @@
     },
     "promType": "GaugeValue",
     "cacheEntryTTL": 86400
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetInfo",
+    "result": "FiberMode",
+    "okValue": "GPON",
+    "promDesc": {
+      "fqName": "gateway_fibre_mode",
+      "help": "gateway fibre mode (1 = GPON)",
+      "varLabels": [
+        "gateway",
+        "FiberMode"
+      ],
+      "fixedLabels": {
+        "interface": "Fibre"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 3600
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetInfoGPON",
+    "result": "ONUId",
+    "promDesc": {
+      "fqName": "gateway_fibre_gpon_info",
+      "help": "gateway_fibre_gpon_info (ONU id)",
+      "varLabels": [
+        "gateway",
+        "GPONSerial",
+        "PONId",
+        "UNIType"
+      ],
+      "fixedLabels": {
+        "interface": "Fibre"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 600
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetStatistics",
+    "result": "ConnectionRateDown",
+    "promDesc": {
+      "fqName": "gateway_max_bitrate",
+      "help": "maximum bitrate on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Down",
+        "interface": "Fibre"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 86400
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetStatistics",
+    "result": "ConnectionRateUp",
+    "promDesc": {
+      "fqName": "gateway_max_bitrate",
+      "help": "maximum bitrate on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Up",
+        "interface": "Fibre"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 86400
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetStatistics",
+    "result": "MinutesInShowtime",
+    "promDesc": {
+      "fqName": "gateway_fibre_showtime_minutes",
+      "help": "gateway fibre showtime (minutes)",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "interface": "Fibre"
+      }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 300
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetStatistics",
+    "result": "Resyncs",
+    "promDesc": {
+      "fqName": "gateway_fibre_resyncs_total",
+      "help": "gateway total fibre resynchronizations",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "interface": "Fibre"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 300
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetStatistics",
+    "result": "BytesReceived",
+    "promDesc": {
+      "fqName": "gateway_traffic",
+      "help": "traffic on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Received",
+        "interface": "Fibre",
+        "unit": "Bytes"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetStatistics",
+    "result": "BytesSent",
+    "promDesc": {
+      "fqName": "gateway_traffic",
+      "help": "traffic on gateway interface",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Sent",
+        "interface": "Fibre",
+        "unit": "Bytes"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetStatistics",
+    "result": "PacketErrorsReceived",
+    "promDesc": {
+      "fqName": "gateway_fibre_errors_total",
+      "help": "gateway total fibre packet errors",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Received",
+        "interface": "Fibre"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:X_AVM-DE_WANFiber:1",
+    "action": "GetStatistics",
+    "result": "PacketErrorsSent",
+    "promDesc": {
+      "fqName": "gateway_fibre_errors_total",
+      "help": "gateway total fibre packet errors",
+      "varLabels": [
+        "gateway"
+      ],
+      "fixedLabels": {
+        "direction": "Sent",
+        "interface": "Fibre"
+      }
+    },
+    "promType": "CounterValue",
+    "cacheEntryTTL": 60
   },
   {
     "service": "urn:dslforum-org:service:LANEthernetInterfaceConfig:1",
@@ -254,8 +454,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Bytes",
-        "interface": "LAN"
+        "interface": "LAN",
+        "unit": "Bytes"
       }
     },
     "promType": "CounterValue",
@@ -273,8 +473,8 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Bytes",
-        "interface": "LAN"
+        "interface": "LAN",
+        "unit": "Bytes"
       }
     },
     "promType": "CounterValue",
@@ -462,23 +662,14 @@
     "cacheEntryTTL": 60
   },
   {
-    "service": "urn:dslforum-org:service:X_AVM-DE_Homeplug:1",
-    "action": "GetGenericDeviceEntry",
-    "actionArgument": {
-      "name": "NewIndex",
-      "isIndex": true,
-      "providerAction": "GetNumberOfDeviceEntries",
-      "value": "NumberOfEntries"
-    },
-    "result": "Active",
+    "service": "urn:dslforum-org:service:X_AVM-DE_Dect:1",
+    "action": "GetNumberOfDectEntries",
+    "result": "NumberOfEntries",
     "promDesc": {
-      "fqName": "gateway_powerline",
-      "help": "powerline device status and details",
+      "fqName": "gateway_dect_devices_count",
+      "help": "number of DECT devices",
       "varLabels": [
-        "gateway",
-        "Model",
-        "MACAddress",
-        "Name"
+        "gateway"
       ]
     },
     "promType": "GaugeValue",
@@ -495,7 +686,7 @@
     },
     "result": "Active",
     "promDesc": {
-      "fqName": "gateway_dect",
+      "fqName": "gateway_dect_devices",
       "help": "DECT device status and details",
       "varLabels": [
         "gateway",
@@ -508,54 +699,40 @@
     "cacheEntryTTL": 300
   },
   {
-    "service": "urn:dslforum-org:service:WANPPPConnection:1",
-    "action": "GetStatusInfo",
-    "result": "ConnectionStatus",
-    "okValue": "Connected",
+    "service": "urn:dslforum-org:service:X_AVM-DE_Homeplug:1",
+    "action": "GetNumberOfDeviceEntries",
+    "result": "NumberOfEntries",
     "promDesc": {
-      "fqName": "gateway_connection_status",
-      "help": "gateway connection status (1 = connected)",
+      "fqName": "gateway_powerline_devices_count",
+      "help": "number of powerline devices",
       "varLabels": [
         "gateway"
-      ],
-      "fixedLabels": {
-        "connection": "IP",
-        "interface": "WAN"
-      }
-    },
-    "promType": "GaugeValue",
-    "cacheEntryTTL": 60
-  },
-  {
-    "service": "urn:dslforum-org:service:WANPPPConnection:1",
-    "action": "GetStatusInfo",
-    "result": "Uptime",
-    "promDesc": {
-      "fqName": "gateway_connection_uptime_seconds",
-      "help": "gateway connection uptime (seconds)",
-      "varLabels": [
-        "gateway"
-      ],
-      "fixedLabels": {
-        "connection": "IP",
-        "interface": "WAN"
-      }
+      ]
     },
     "promType": "GaugeValue",
     "cacheEntryTTL": 300
   },
   {
-    "service": "urn:dslforum-org:service:X_AVM-DE_Dect:1",
-    "action": "GetNumberOfDectEntries",
-    "result": "NumberOfEntries",
-    "promType": "GaugeValue",
-    "cacheEntryTTL": 60,
+    "service": "urn:dslforum-org:service:X_AVM-DE_Homeplug:1",
+    "action": "GetGenericDeviceEntry",
+    "actionArgument": {
+      "name": "NewIndex",
+      "isIndex": true,
+      "providerAction": "GetNumberOfDeviceEntries",
+      "value": "NumberOfEntries"
+    },
+    "result": "Active",
     "promDesc": {
-      "fqName": "gateway_dect_count",
-      "help": "Number of registered DECT devices",
+      "fqName": "gateway_powerline_devices",
+      "help": "powerline device status and details",
       "varLabels": [
-        "gateway"
+        "gateway",
+        "Model",
+        "MACAddress",
+        "Name"
       ]
-    }
+    },
+    "promType": "GaugeValue",
+    "cacheEntryTTL": 300
   }
 ]

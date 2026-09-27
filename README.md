@@ -1,176 +1,249 @@
-# Fritz!Box Upnp statistics exporter for prometheus
+# FRITZ!Box exporter for Prometheus
 
-This exporter exports some variables from an
-[AVM Fritzbox](http://avm.de/produkte/fritzbox/)
-to prometheus.
+Monitor a FRITZ!Box using SOAP/TR-064, WebGUI Lua endpoints and the newer
+FRITZ!OS API v0. This fork of [sberk42/fritzbox_exporter](https://github.com/sberk42/fritzbox_exporter)
+adds API collection, persistent router events and detailed collection diagnostics.
 
-This exporter is tested with a Fritzbox 7590 software version 07.12, 07.20, 07.21, 07.25, 07.29, 07.50, 07.57 , 07.59 and 08.00.
+## Improvements over upstream
 
-The goal of the fork is:
+| Feature | What this fork adds |
+| --- | --- |
+| **API metrics for newer FRITZ!OS** | Optional authenticated `/api/v0/` JSON collector for values that some newer WebGUI versions no longer return through the previous Lua paths; filtering, label mapping and sample selection. |
+| **Persistent event archive** | Router events, query failures and recoveries in bounded SQLite storage, with a browser viewer at `/events` and a read-only JSON API. |
+| **Errors exposed as metrics** | Per-definition success, error counters, error category, result count and last success across SOAP, Lua and API. |
+| **Bounded collection** | Request timeouts, total collection budgets and rejection of overlapping scrapes. |
+| **Session recovery** | API recovery after expired sessions or router restarts; synchronized SOAP authentication for concurrent archive and metric requests. |
+| **Packaging** | Versioned ARM64 images built from this fork, with race tests, static checks and container/SQLite smoke tests. |
 
-- [x] allow passing of username / password using evironment variable
-- [x] use https instead of http for communitcation with fritz.box
-- [x] move config of metrics to be exported to config file rather then code
-- [x] add config for additional metrics to collect (especially from TR-064 API)
-- [x] create a grafana dashboard consuming the additional metrics
-- [x] collect metrics from lua APIs not available in UPNP APIs
+SOAP, Lua collection and the original Grafana dashboard are inherited features.
+See [Changes from upstream](CHANGES_FROM_UPSTREAM.md) for scope and migration notes.
 
-Other changes:
+## Example configurations and firmware
 
-- replaced digest authentication code with own implementation
-- improved error messages
-- test mode prints details about all SOAP Actions and their parameters
-- collect option to directly test collection of results
-- additional metrics to collect details about connected hosts and DECT devices
-- support to use results like hostname or MAC address as labels to metrics
-- support for metrics from lua APIs (e.g. CPU temperature, utilization, ...)
+The examples are derived from two running installations, reviewed for private
+addresses, device identifiers and credentials. Credentials are supplied separately.
+They are firmware-specific examples, not a guarantee of support on every router.
 
-## Versioned ARM64 image (this fork)
+| Model | Firmware reference | Sources | Files |
+| --- | --- | --- | --- |
+| FRITZ!Box **5690** (not Pro), direct GPON fibre | FRITZ!OS **8.40**; initial validation on **8.40-136122 BETA** | SOAP + API + Lua | [5690 profile](examples/dashboard/5690) |
+| FRITZ!Box **4040**, Ethernet WAN to a modem | FRITZ!OS **8.03** | SOAP + Lua; empty API file | [4040 profile](examples/dashboard/4040) |
 
-Use `senecaiii/fritzbox_exporter:v1.1.0` for the current release.
-Release images use `vMAJOR.MINOR.PATCH` tags instead of the former
-`api-v0-testN` tags. Pin a version for reproducible updates and rollbacks;
-the old `latest` tag is not updated by this release workflow.
+The profiles reflect the supplied configuration backups from September 2026.
+The exact current 8.40 build was not re-read as part of this documentation update.
+Older model examples and discovery snapshots have been removed; Git history
+retains them. Root-level metric files remain generic defaults for compatibility.
+Use all three files from the chosen profile together, following the
+[profile notes and known limitations](examples/dashboard/README.md).
 
-Version 1.1.0 recovers API authentication after a FRITZ!Box restart, including
-FRITZ!OS returning HTTP 400 for an expired session. The exporter verifies
-the SID before reauthenticating and retries the read once within the existing
-collection timeout. Transport failures discard the old API session and cache;
-the next request can log in again. A normal provider reconnection does not
-require a new login while the local router session remains valid.
-Metrics files, environment variables, ports and the SQLite archive schema
-remain compatible with api-v0-test9. No new environment variables are needed.
+The API is needed because some newer firmware exposes CPU, RAM, energy, VPN and
+other WebGUI data through API v0 instead of the former `data.lua` response fields.
+This is **not a universal firmware cutoff**: the 4040 still supplies these through
+Lua, and the 5690 still uses Lua for optical diagnostics and the downstream chart.
+There is no automatic fallback between sources. See [API.md](API.md).
 
-## Building
+## Run with Docker or Portainer
 
-```bash
-go install github.com/sberk42/fritzbox_exporter@latest
+Stable image: **`senecaiii/fritzbox_exporter:v1.1.2`** — **Linux ARM64**.
+The optional **`v1.1.3-test`** image adds host-duplicate diagnostics for the ongoing
+4040 investigation. It is not a fix for that issue. `latest` is not updated by
+this fork's release workflow. Other architectures require a separate build.
+
+Create a dedicated FRITZ!Box user with permission for the selected data and enable
+the applicable TR-064/UPnP access. Copy the chosen profile's three files into
+`./config`. Set `FRITZBOX_USERNAME` and `FRITZBOX_PASSWORD` outside version control.
+
+```yaml
+services:
+  fritzbox-exporter:
+    image: senecaiii/fritzbox_exporter:v1.1.2
+    restart: unless-stopped
+    stop_grace_period: 70s
+    ports:
+      - "9042:9042"
+    environment:
+      USERNAME: "${FRITZBOX_USERNAME}"
+      PASSWORD: "${FRITZBOX_PASSWORD}"
+      GATEWAY_URL: "http://fritz.box:49000"
+      GATEWAY_LUAURL: "http://fritz.box"
+      METRICS_FILE: /config/metrics.json
+      LUA_METRICS_FILE: /config/metrics-lua.json
+      API_METRICS_FILE: /config/metrics-api.json
+      ARCHIVE_FILE: /data/events.db
+      ARCHIVE_TIMEZONE: Europe/Berlin
+      ARCHIVE_RETENTION: 2160h
+      ARCHIVE_MAX_ROWS: "50000"
+      ARCHIVE_MAX_MB: "64"
+    volumes:
+      - ./config:/config:ro
+      - archive-data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  archive-data:
 ```
 
-## Running
+Replace `fritz.box` with a router address resolvable from inside the container.
+Set the timezone to that used in the router's event timestamps. For multiple
+routers use separate containers, configuration directories, published ports and
+archive volumes. In Portainer set the same environment variables and mounts.
+The container listens on `0.0.0.0:9042`; `LISTEN_ADDRESS` is not the Docker host IP.
+The standalone binary defaults to `127.0.0.1:9042`.
 
-Create a new user account for the exporter on the Fritzbox using the login credentials:
+Configure Prometheus to scrape `/metrics`, for example every 60 seconds. Keep
+`scrape_timeout` above `COLLECTION_TIMEOUT`, but within `scrape_interval`:
 
-```bash
-USERNAME=your_fritzbox_username
-PASSWORD=your_fritzbox_password
+```yaml
+scrape_configs:
+  - job_name: fritzbox
+    scrape_interval: 60s
+    scrape_timeout: 55s
+    static_configs:
+      - targets: ["exporter-host:9042"]
+        labels:
+          device: "router-example"
 ```
 
-Grant this user access to the following features:
-FRITZ!Box settings, voice messages, fax messages, FRITZ!App Fon and call list,
-Smart Home, access to NAS content, and VPN.
+The `device` label is added by Prometheus, not the exporter. Dashboards must use
+the same labels. Never commit actual credentials, router responses or event
+archives to a public repository.
 
-In the configuration of the Fritzbox the option "Statusinformationen über UPnP übertragen" in the dialog "Heimnetz >
-Heimnetzübersicht > Netzwerkeinstellungen" has to be enabled.
+## Collector settings
 
-### Using docker
+| Environment variable | Default / purpose |
+| --- | --- |
+| `USERNAME`, `PASSWORD` | Router credentials; set explicitly. |
+| `GATEWAY_URL` | `http://fritz.box:49000`, SOAP origin. |
+| `GATEWAY_LUAURL` | `http://fritz.box`, WebGUI origin. |
+| `GATEWAY_APIURL` | Uses the WebGUI origin unless overridden. |
+| `METRICS_FILE` | `metrics.json`, SOAP definitions. |
+| `LUA_METRICS_FILE` | `metrics-lua.json`, Lua definitions. |
+| `API_METRICS_FILE` | Unset: API disabled. The root API example is empty. |
+| `SESSIONAPI` | `v2`, WebGUI login protocol, unrelated to API v0. |
+| `VERIFYTLS` | `false`; set `true` to verify TLS certificates. |
+| `SOAP_TIMEOUT`, `LUA_TIMEOUT`, `API_TIMEOUT` | `10s` per HTTP request. |
+| `COLLECTION_TIMEOUT` | `25s`; SOAP/Lua share a budget, API has a separate concurrent budget. |
 
-The image is available as package using:
-`docker pull ghcr.io/sberk42/fritzbox_exporter/fritzbox_exporter:latest`
-or you can build the container yourself: `docker build --tag fritzbox-prometheus-exporter:latest .`
+Use `-h` for all flags. `-nolua` disables Lua, not API collection. A remote router
+may require a larger collection budget, with corresponding Prometheus timeout
+headroom. A timeout is not proof that a particular metric is unsupported.
 
-Then start the container:
+## Event archive and `/events`
 
-```bash
-$ docker run -e 'USERNAME=your_fritzbox_username' \
-    -e 'PASSWORD=your_fritzbox_password' \
-    -e 'GATEWAY_URL="http://192.168.0.1:49000"' \
-    -e 'LISTEN_ADDRESS="0.0.0.0:9042"' \
-    fritzbox-prometheus-exporter:latest
+Enable `ARCHIVE_FILE` and mount persistent local storage. The archive polls SOAP
+`DeviceInfo/GetDeviceLog` independently of Prometheus; query errors and recoveries
+are recorded when metrics are collected. `/events` provides filters, pagination,
+occurrence counts and storage/poll status. `/api/events` provides read-only JSON.
+It requires no Grafana plugin and does not expose SQLite directly.
+
+| Environment variable | Default | Meaning |
+| --- | --- | --- |
+| `ARCHIVE_FILE` | Empty | Disabled unless a database path is provided, e.g. `/data/events.db`. |
+| `ARCHIVE_TOKEN` | Empty | Optional read-access token; at least 16 characters if set. |
+| `ARCHIVE_TIMEZONE` | `Europe/Berlin` | Timezone of the router's event timestamps. |
+| `ARCHIVE_INTERVAL` | `30s` | Router event polling interval. |
+| `ARCHIVE_RETENTION` | `2160h` | 90 days since last observation; Go duration syntax, e.g. `720h` for 30 days. |
+| `ARCHIVE_MAX_ROWS` | `50000` | Retain the newest rows by last observation; minimum 100. |
+| `ARCHIVE_MAX_MB` | `64` | Main SQLite database limit in MiB; minimum 8. Journal overhead is additional. |
+
+Old rows are removed during writes. Repeated identical query failures are grouped;
+changed messages create new rows. Router messages whose embedded occurrence count
+changes are also separate records. SQLite reuses freed pages, so deletion need
+not shrink the database file. Hitting the size limit can cause write failures;
+it does not guarantee automatic eviction before every insert. WAL checkpoints
+limit journal growth, but the main-file limit is not a directory quota.
+
+Without `ARCHIVE_TOKEN`, anyone who can reach the exporter can read the archive.
+Use trusted network access or an authenticated HTTPS reverse proxy; router event
+text can contain private network details. Archive retention is independent of
+Docker log rotation (configured separately in the Compose example above).
+
+Use a separate local database per exporter; do not share a file between instances
+or place it on SMB/NFS. Stop the container and back up the entire volume for a
+simple consistent backup. Events lost from the router before polling cannot be
+reconstructed. See [ARCHIVE.md](ARCHIVE.md) for details and API parameters.
+
+## Error diagnostics in Prometheus and Grafana
+
+| Metric | Meaning |
+| --- | --- |
+| `fritzbox_exporter_query_success` | Last evaluation: 1 successful, 0 failed; cached/valid empty results may succeed. |
+| `fritzbox_exporter_query_error` | Current failure with `reason`; emitted as 1 only for failed definitions, absent after recovery. |
+| `fritzbox_exporter_query_errors_total` | Failed evaluations; at most one increment per definition per collection. |
+| `fritzbox_exporter_query_results` | Samples emitted by a definition in the last evaluation. |
+| `fritzbox_exporter_query_last_success_timestamp_seconds` | Last successful evaluation, including cached results. |
+| `fritzbox_exporter_collection_timeouts_total` | Exhausted collection budgets, by backend. |
+| `fritzbox_exporter_scrapes_rejected_total` | Overlapping `/metrics` requests rejected with HTTP 503. |
+
+Aggregate counters are `fritzbox_exporter_collect_errors_total` (SOAP),
+`fritzbox_exporter_lua_collect_errors_total` and
+`fritzbox_exporter_api_collect_errors_total`. They need not match the per-definition
+counts. Prometheus `up=1` only confirms a successful scrape, not successful router
+queries or an active Internet connection.
+
+Diagnostics identify `collector` (`soap`, `lua`, `api`), `query` (configuration
+position), `source` and `metric`. If a target also supplies `collector`, Prometheus
+normally renames the exporter's label to `exported_collector`. Only the first
+failure reason per evaluation is retained; detailed errors are in logs/archive,
+not high-cardinality metric labels.
+
+Current failed definitions:
+
+```promql
+sum(1 - fritzbox_exporter_query_success{device="$device"})
 ```
 
-I've you're getting `no such host` issues, define your FritzBox as DNS server for your docker container like this:
+Failure table for the previous hour (use Grafana's Instant query mode):
 
-```bash
-$ docker run --dns YOUR_FRITZBOX_IP \
-    -e 'USERNAME=your_fritzbox_username' \
-    -e 'PASSWORD=your_fritzbox_password' \
-    -e 'GATEWAY_URL="http://192.168.0.1:49000"' \
-    -e 'LISTEN_ADDRESS="0.0.0.0:9042"' \
-    fritzbox-prometheus-exporter:latest
+```promql
+increase(fritzbox_exporter_query_errors_total{device="$device"}[1h]) > 0
 ```
 
-### Using docker-compose
+`increase()` extrapolates to the window boundaries, so fractional counts are
+normal. Current-error tables return no data when there are no errors. See
+[DIAGNOSTICS.md](DIAGNOSTICS.md) for all meanings and example queries.
 
-Set your environment variables within the [docker-compose.yml](docker-compose.yml) file.
+The inherited [Grafana dashboard](grafana/README.md) is a starting point and needs
+adjustment for these profiles. Set Grafana's Prometheus scrape interval to the
+actual scrape interval; use `$__rate_interval` for counter rates. A value already
+expressed as a rate is a gauge and should not be passed to `rate()` again.
 
-Then start up the container using `docker-compose up -d`.
+## Customize the event viewer
 
-### Using the binary
+[`archive.html`](archive.html) contains the HTML, CSS and JavaScript for `/events`.
+[`archive_http.go`](archive_http.go) embeds it with Go's `//go:embed` at build time.
+To change colours, typography or add a logo, edit that file and rebuild the binary
+or image. Mounting a replacement HTML file into the existing container does not
+change the embedded page. There is currently no theme/logo environment variable
+or configurable template directory. A self-contained inline SVG logo can be
+included in the HTML without adding a new asset endpoint.
 
-Usage:
+For a shared visual identity across projects, a future theme could expose common
+colour tokens, a logo, product title and footer while retaining bundled defaults.
+This is a design direction, not an implemented configuration feature.
 
-```bash
-$GOPATH/bin/fritzbox_exporter -h
-Usage of ./fritzbox_exporter:
-  -gateway-url string
-    The URL of the FRITZ!Box (default "http://fritz.box:49000")
-  -gateway-luaurl string
-    The URL of the FRITZ!Box UI (default "http://fritz.box")
-  -metrics-file string
-    The JSON file with the metric definitions. (default "metrics.json")
-  -lua-metrics-file string
-    The JSON file with the lua metric definitions. (default "metrics-lua.json")
-  -test
-    print all available SOAP calls and their results (if call possible) to stdout
-  -json-out string
-    store metrics also to JSON file when running test
-  -testLua
-    read luaTest.json file make all contained calls and dump results
-  -collect
-    collect metrics once print to stdout and exit
-  -nolua
-    disable collecting lua metrics
-  -username string
-    The user for the FRITZ!Box UPnP service
-  -password string
-    The password for the FRITZ!Box UPnP service
-  -listen-address string
-    The address to listen on for HTTP requests. (default "127.0.0.1:9042")
+## Build and license
 
-The password (needed for metrics from TR-064 API) can be passed over environment variables to test in shell:
-read -rs PASSWORD && export PASSWORD && ./fritzbox_exporter -username <user> -test; unset PASSWORD
+```sh
+git clone https://github.com/speckenbuettel/fritzbox_exporter.git
+cd fritzbox_exporter
+go build -o fritzbox_exporter .
+go test ./...
+go vet ./...
+docker build -t fritzbox_exporter:local .
 ```
 
-## Exported metrics
+Docker builds the checked-out source with Go 1.25.5, including SQLite without CGO.
+The Go module path remains `github.com/sberk42/fritzbox_exporter`; installing that
+upstream module with `@latest` does not install this fork.
 
-start exporter and run
-curl -s http://127.0.0.1:9042/metrics
-
-## Output of -test
-
-The exporter prints all available Variables to stdout when called with the -test option.
-These values are determined by parsing all services from http://fritz.box:49000/igddesc.xml and http://fritzbox:49000/tr64desc.xml (for TR64 username and password is needed!!!)
-
-## Customizing metrics
-
-The metrics to collect are no longer hard coded, but have been moved to the [metrics.json](metrics.json) and [metrics-lua.json](metrics-lua.json) files, so just adjust to your needs (for cable version also see [metrics-lua_cable.json](metrics-lua_cable.json)).
-For a list of all the available metrics just execute the exporter with -test (username and password are needed for the TR-064 API!)
-For lua metrics open UI in browser and check the json files used for the various screens.
-
-For a list of all available metrics, see the dumps below (the format is the same as in the metrics.json file, so it can be used to easily add further metrics to retrieve):
-
-- [FritzBox 5690 Pro v8.26](all_available_metrics_5690_pro_8.25.json)
-- [FritzBox 5690 Pro v8.03](all_available_metrics_5690_pro_8.03.json)
-- [FritzBox 6591 v7.29](all_available_metrics_6591_7.29.json)
-- [FritzBox 6690 v7.57](all_available_metrics_6690_7.57.json)
-- [FritzBox 7590 v7.12](all_available_metrics_7590_7.12.json)
-- [FritzBox 7590 v7.20](all_available_metrics_7590_7.20.json)
-- [FritzBox 7590 v7.25](all_available_metrics_7590_7.25.json)
-- [FritzBox 7590 v7.29](all_available_metrics_7590_7.29.json)
-- [FritzBox 7590 v7.50](all_available_metrics_7590_7.50.json)
-- [FritzBox 7590 v7.57](all_available_metrics_7590_7.57.json)
-- [FritzBox 7590 v7.59](all_available_metrics_7590_7.59.json) - same as 7.57
-- [FritzBox 7590 v8.00](all_available_metrics_7590_8.00.json)
-- [FritzBox 7590 v8.02](all_available_metrics_7590_8.02.json)
-- [FritzBox 7590 v8.20](all_available_metrics_7590_8.20.json)
-- [FritzBox 7590 v8.25](all_available_metrics_7590_8.25.json)
-- [FritzBox 5530 v8.20](all_available_metrics_5530_8.20.json)
-
-## Grafana Dashboard
-
-The dashboard is now also published on [Grafana](https://grafana.com/grafana/dashboards/12579).
-
-## Optional FRITZ!OS API v0 support
-
-See [API.md](API.md) for the separate metrics-api.json collector and configuration.
+This fork remains under the [Apache License 2.0](LICENSE), inherited from upstream.
+Original copyright and license notices are retained. This is a modified fork;
+[CHANGES_FROM_UPSTREAM.md](CHANGES_FROM_UPSTREAM.md) records its main additions.
+Apache 2.0 already permits commercial use, modification and redistribution and
+includes an express patent grant. Replacing LICENSE with MIT alone would not
+remove the obligations for inherited Apache-licensed code. See
+[Apache 2.0, section 4](https://www.apache.org/licenses/LICENSE-2.0.html#redistribution).

@@ -1,4 +1,126 @@
 {
   "labelRenames": [],
-  "metrics": []
+  "metrics": [
+    {
+      "path": "data.lua",
+      "params": "page=inetOv",
+      "resultPath": "data.connectionData.infoMiddle.chartData.values",
+      "resultKey": "-1",
+      "promDesc": {
+        "fqName": "gateway_traffic_rate",
+        "help": "traffic rate on gateway interface",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "direction": "Download",
+          "interface": "Fibre",
+          "unit": "Bytes"
+        }
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60
+    },
+    {
+      "path": "data.lua",
+      "params": "page=fiberFiber",
+      "resultPath": "data",
+      "resultKey": "isConnected",
+      "okValue": "true",
+      "promDesc": {
+        "fqName": "gateway_connection_status",
+        "help": "gateway connection status (1 = connected)",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "connection": "Physical Link",
+          "interface": "Fibre"
+        }
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 60
+    },
+    {
+      "path": "data.lua",
+      "params": "page=fiberFiber",
+      "resultPath": "data.sfpProperties.0",
+      "resultKey": "val",
+      "promDesc": {
+        "fqName": "gateway_fibre_module_temperature_celsius",
+        "help": "optical module temperature (deg Celsius)",
+        "varLabels": [
+          "gateway"
+        ]
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 300
+    },
+    {
+      "path": "data.lua",
+      "params": "page=fiberFiber",
+      "resultPath": "data.sfpProperties.1",
+      "resultKey": "val",
+      "promDesc": {
+        "fqName": "gateway_fibre_module_voltage_volts",
+        "help": "optical module voltage (volts)",
+        "varLabels": [
+          "gateway"
+        ]
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 300
+    },
+    {
+      "path": "data.lua",
+      "params": "page=fiberFiber",
+      "resultPath": "data.sfpProperties.2",
+      "resultKey": "val",
+      "promDesc": {
+        "fqName": "gateway_fibre_laser_current_milliamperes",
+        "help": "laser bias current (milliamperes)",
+        "varLabels": [
+          "gateway"
+        ]
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 300
+    },
+    {
+      "path": "data.lua",
+      "params": "page=fiberFiber",
+      "resultPath": "data.sfpProperties.3",
+      "resultKey": "val",
+      "promDesc": {
+        "fqName": "gateway_fibre_power_dbm",
+        "help": "optical power (dBm)",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "direction": "Up"
+        }
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 300
+    },
+    {
+      "path": "data.lua",
+      "params": "page=fiberFiber",
+      "resultPath": "data.sfpProperties.4",
+      "resultKey": "val",
+      "promDesc": {
+        "fqName": "gateway_fibre_power_dbm",
+        "help": "optical power (dBm)",
+        "varLabels": [
+          "gateway"
+        ],
+        "fixedLabels": {
+          "direction": "Down"
+        }
+      },
+      "promType": "GaugeValue",
+      "cacheEntryTTL": 300
+    }
+  ]
 }

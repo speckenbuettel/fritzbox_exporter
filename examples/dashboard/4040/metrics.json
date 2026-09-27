@@ -38,7 +38,7 @@
     "result": "ExternalIPAddress",
     "promDesc": {
       "fqName": "gateway_connection_external_ip",
-      "help": "gateway external IP address",
+      "help": "gateway external IPv4 address",
       "varLabels": [
         "gateway",
         "MACAddress",
@@ -102,8 +102,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Bytes",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Bytes"
       }
     },
     "promType": "CounterValue",
@@ -121,8 +121,8 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Bytes",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Bytes"
       }
     },
     "promType": "CounterValue",
@@ -140,8 +140,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Packets",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
@@ -159,8 +159,8 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Packets",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
@@ -178,8 +178,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Bytes",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Bytes"
       }
     },
     "promType": "GaugeValue",
@@ -197,8 +197,8 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Bytes",
-        "interface": "WAN"
+        "interface": "WAN",
+        "unit": "Bytes"
       }
     },
     "promType": "GaugeValue",
@@ -211,18 +211,17 @@
     "okValue": "Ethernet",
     "promDesc": {
       "fqName": "gateway_access_type",
-      "help": "gateway access type (ETHERNET, CABLE, FIBRE, etc.)",
+      "help": "gateway access type (ETHERNET, DSL, CABLE, FIBRE, LTE, etc.)",
       "varLabels": [
         "gateway",
         "WANAccessType"
       ],
       "fixedLabels": {
-        "connection": "Access Type",
         "interface": "WAN"
       }
     },
     "promType": "GaugeValue",
-    "cacheEntryTTL": 3600
+    "cacheEntryTTL": 86400
   },
   {
     "service": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
@@ -249,7 +248,7 @@
     "result": "Layer1DownstreamMaxBitRate",
     "promDesc": {
       "fqName": "gateway_max_bitrate",
-      "help": "max bitrate on gateway interface",
+      "help": "maximum bitrate on gateway interface",
       "varLabels": [
         "gateway"
       ],
@@ -267,7 +266,7 @@
     "result": "Layer1UpstreamMaxBitRate",
     "promDesc": {
       "fqName": "gateway_max_bitrate",
-      "help": "max bitrate on gateway interface",
+      "help": "maximum bitrate on gateway interface",
       "varLabels": [
         "gateway"
       ],
@@ -291,8 +290,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Bytes",
-        "interface": "LAN"
+        "interface": "LAN",
+        "unit": "Bytes"
       }
     },
     "promType": "CounterValue",
@@ -310,11 +309,25 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Bytes",
-        "interface": "LAN"
+        "interface": "LAN",
+        "unit": "Bytes"
       }
     },
     "promType": "CounterValue",
+    "cacheEntryTTL": 60
+  },
+  {
+    "service": "urn:dslforum-org:service:Hosts:1",
+    "action": "GetHostNumberOfEntries",
+    "result": "HostNumberOfEntries",
+    "promDesc": {
+      "fqName": "gateway_hosts_count",
+      "help": "number of hosts",
+      "varLabels": [
+        "gateway"
+      ]
+    },
+    "promType": "GaugeValue",
     "cacheEntryTTL": 60
   },
   {
@@ -406,8 +419,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Packets",
-        "wlan": "2.4 GHz"
+        "wlan": "2.4 GHz",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
@@ -425,8 +438,8 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Packets",
-        "wlan": "2.4 GHz"
+        "wlan": "2.4 GHz",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
@@ -496,8 +509,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Packets",
-        "wlan": "5 GHz"
+        "wlan": "5 GHz",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
@@ -515,8 +528,8 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Packets",
-        "wlan": "5 GHz"
+        "wlan": "5 GHz",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
@@ -586,8 +599,8 @@
       ],
       "fixedLabels": {
         "direction": "Received",
-        "unit": "Packets",
-        "wlan": "Guest"
+        "wlan": "Guest",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
@@ -605,34 +618,11 @@
       ],
       "fixedLabels": {
         "direction": "Sent",
-        "unit": "Packets",
-        "wlan": "Guest"
+        "wlan": "Guest",
+        "unit": "Packets"
       }
     },
     "promType": "CounterValue",
     "cacheEntryTTL": 60
-  },
-  {
-    "service": "urn:dslforum-org:service:X_AVM-DE_Homeplug:1",
-    "action": "GetGenericDeviceEntry",
-    "actionArgument": {
-      "name": "NewIndex",
-      "isIndex": true,
-      "providerAction": "GetNumberOfDeviceEntries",
-      "value": "NumberOfEntries"
-    },
-    "result": "Active",
-    "promDesc": {
-      "fqName": "gateway_powerline",
-      "help": "powerline device status and details",
-      "varLabels": [
-        "gateway",
-        "Model",
-        "MACAddress",
-        "Name"
-      ]
-    },
-    "promType": "GaugeValue",
-    "cacheEntryTTL": 300
   }
 ]
