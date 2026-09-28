@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -78,5 +80,42 @@ func TestDuplicateHostDiagnosticSources(t *testing.T) {
 	}
 	if len(seen) != 1 || upnpCache[service+"|GetGenericHostEntry|NewIndex|0"].Timestamp != 100 {
 		t.Fatal("diagnostic mutated state")
+	}
+}
+
+func TestHostResultDifferences(t *testing.T) {
+	a := upnp.Result{"HostName": "private-host", "Active": uint64(1)}
+	if got := hostResultDifferences(a, a); len(got) != 0 {
+		t.Fatal(got)
+	}
+	b := upnp.Result{"HostName": "PRIVATE-HOST", "Active": uint64(0), "LeaseTimeRemaining": uint64(7)}
+	want := []string{"Active", "HostName", "LeaseTimeRemaining"}
+	if got := hostResultDifferences(a, b); !reflect.DeepEqual(got, want) {
+		t.Fatal(got)
+	}
+}
+
+func TestHostComparisonDoesNotLogValues(t *testing.T) {
+	logger := logrus.StandardLogger()
+	oldHooks := logger.ReplaceHooks(make(logrus.LevelHooks))
+	defer logger.ReplaceHooks(oldHooks)
+	hook := logtest.NewGlobal()
+	fc := &FritzboxCollector{Gateway: "test"}
+	m := &Metric{PromDesc: JSONPromDesc{VarLabels: []string{"gateway", "HostName", "MACAddress", "InterfaceType"}}}
+	seen := make(map[string]hostReadDiagnostic)
+	a := upnp.Result{"HostName": "private-host", "MACAddress": "private-mac", "Active": uint64(1)}
+	fc.logDuplicateHost(m, a, 0, 2, 0, hostReadDiagnostic{}, seen)
+	b := upnp.Result{"HostName": "PRIVATE-HOST", "MACAddress": "private-mac", "Active": uint64(0)}
+	fc.logDuplicateHost(m, b, 1, 2, 0, hostReadDiagnostic{}, seen)
+	event := hook.LastEntry()
+	if event.Data["soap_results_equal"] != false {
+		t.Fatal(event.Data)
+	}
+	if !reflect.DeepEqual(event.Data["missing_label_fields"], []string{"InterfaceType"}) {
+		t.Fatal(event.Data)
+	}
+	line, _ := event.String()
+	if strings.Contains(strings.ToLower(line), "private-") {
+		t.Fatal("host values leaked")
 	}
 }
