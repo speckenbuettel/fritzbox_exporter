@@ -119,3 +119,18 @@ func TestHostComparisonDoesNotLogValues(t *testing.T) {
 		t.Fatal("host values leaked")
 	}
 }
+
+func TestInvalidateHostCacheScoped(t *testing.T) {
+	old := upnpCache
+	defer func() { upnpCache = old }()
+	m := &Metric{Service: "hosts", ActionArgument: &ActionArg{ProviderAction: "GetHostNumberOfEntries"}}
+	upnpCache = map[string]*upnpCacheEntry{
+		"hosts|GetHostNumberOfEntries": {}, "hosts|GetGenericHostEntry|NewIndex|0": {},
+		"hosts|GetGenericHostEntry|NewIndex|30": {}, "other|GetGenericHostEntry|NewIndex|0": {},
+		"hosts|OtherAction": {},
+	}
+	invalidateHostCache(m)
+	if len(upnpCache) != 2 || upnpCache["hosts|OtherAction"] == nil || upnpCache["other|GetGenericHostEntry|NewIndex|0"] == nil {
+		t.Fatal(upnpCache)
+	}
+}

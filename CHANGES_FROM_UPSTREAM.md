@@ -79,3 +79,11 @@ not emitted as aliases; historical series retain their original names.
 Tests cover extraction, authentication/recovery, timeouts, diagnostics and SQLite.
 Release CI includes ARM64 container/archive smoke tests. Model profile validation
 is limited to the documented firmware; other hardware needs separate verification.
+
+
+## v1.1.5-test: host enumeration recovery
+
+- Identical decoded host rows are emitted once per query evaluation and no longer mark that query as failed. Conflicting results with identical metric labels remain errors.
+- `fritzbox_exporter_host_identical_duplicates_total{gateway="..."}` counts skipped identical rows per evaluation, including cached rows; it is not a count of distinct router events.
+- UPnP error 713 stops host enumeration and invalidates the host count and all indexed host cache entries. The next scrape reads them afresh. The failed scrape may contain partial host data and remains marked failed.
+- Regression coverage includes duplicate/conflicting rows and a SOAP server whose host list shrinks, followed by recovery on the next scrape.

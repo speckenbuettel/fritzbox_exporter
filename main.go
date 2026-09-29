@@ -541,16 +541,22 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 						}
 						collectErrors.Inc()
 						fc.diagnostics.fail("request", err)
+						if firstInvalidIndex >= 0 {
+							invalidateHostCache(m)
+							break
+						}
 						continue
 					}
 
 					if m.Action == "GetGenericHostEntry" {
-						fc.logDuplicateHost(m, result, i, count, countAge, hostRead, seenHosts)
+						if fc.logDuplicateHost(m, result, i, count, countAge, hostRead, seenHosts) {
+							continue
+						}
 					}
 					fc.reportMetric(ch, m, result, dupCache)
 				}
 				if firstInvalidIndex >= 0 && aa.ProviderAction != "" {
-					fc.logHostCountCheck(m, firstInvalidIndex, count, countAge, started)
+					logrus.WithFields(logrus.Fields{"gateway": fc.Gateway, "first_invalid_index": firstInvalidIndex, "count": count, "enumeration_duration_ms": time.Since(started).Milliseconds()}).Warn("host enumeration incomplete; host cache invalidated for next scrape")
 				}
 
 				continue
@@ -813,7 +819,7 @@ func main() {
 	if *flagSOAPTimeout <= 0 || *flagLuaTimeout <= 0 || *flagCollectionTimeout <= 0 {
 		logrus.Fatal("request and collection timeouts must be positive")
 	}
-	prometheus.MustRegister(collectionTimeouts, overlappingScrapes)
+	prometheus.MustRegister(collectionTimeouts, overlappingScrapes, identicalHostDuplicates)
 	level, e := logrus.ParseLevel(*flagLogLevel)
 	if e != nil {
 		logrus.Warnf("Can not parse log level: %s use INFO", e)

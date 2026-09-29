@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"reflect"
 	"sort"
 	"strings"
@@ -74,7 +75,7 @@ func hostReadBeforeCall(m *Metric, arg *upnp.ActionArgument, now int64) hostRead
 	}
 	return d
 }
-func (fc *FritzboxCollector) logDuplicateHost(m *Metric, result upnp.Result, index, count int, countAge int64, read hostReadDiagnostic, seen map[string]hostReadDiagnostic) {
+func (fc *FritzboxCollector) logDuplicateHost(m *Metric, result upnp.Result, index, count int, countAge int64, read hostReadDiagnostic, seen map[string]hostReadDiagnostic) bool {
 	labels := make([]string, len(m.PromDesc.VarLabels))
 	for i, name := range m.PromDesc.VarLabels {
 		if name == "gateway" {
@@ -99,6 +100,10 @@ func (fc *FritzboxCollector) logDuplicateHost(m *Metric, result upnp.Result, ind
 	}
 	if first, ok := seen[key]; ok {
 		differing := hostResultDifferences(first.Result, result)
+		if len(differing) == 0 {
+			identicalHostDuplicates.WithLabelValues(fc.Gateway).Inc()
+			return true
+		}
 		missing := make([]string, 0)
 		empty := make([]string, 0)
 		for _, name := range m.PromDesc.VarLabels {
@@ -128,6 +133,7 @@ func (fc *FritzboxCollector) logDuplicateHost(m *Metric, result upnp.Result, ind
 	} else {
 		seen[key] = read
 	}
+	return false
 }
 
 // Compare decoded SOAP fields before label normalization. Only field names are
@@ -150,4 +156,21 @@ func hostResultDifferences(a, b upnp.Result) []string {
 	}
 	sort.Strings(different)
 	return different
+}
+
+// Counts skipped rows per evaluation, including rows reused from cache.
+var identicalHostDuplicates = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name: "fritzbox_exporter_host_identical_duplicates_total",
+	Help: "Identical decoded host rows skipped per evaluation, including cached rows.",
+}, []string{"gateway"})
+
+// Index positions are no longer reliable after the router rejects an index.
+func invalidateHostCache(m *Metric) {
+	delete(upnpCache, m.Service+"|"+m.ActionArgument.ProviderAction)
+	prefix := m.Service + "|GetGenericHostEntry|"
+	for key := range upnpCache {
+		if strings.HasPrefix(key, prefix) {
+			delete(upnpCache, key)
+		}
+	}
 }
