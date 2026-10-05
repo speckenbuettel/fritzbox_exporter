@@ -197,6 +197,7 @@ type FritzboxCollector struct {
 	collectionContext context.Context
 	soapClient        *http.Client
 	diagnostics       queryDiagnostics
+	hostTrace         hostTraceState
 	URL               string
 	Gateway           string
 	Username          string
@@ -519,6 +520,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 				if entry := upnpCache[m.Service+"|"+aa.ProviderAction]; entry != nil && entry.Result != nil {
 					countAge = time.Now().Unix() - entry.Timestamp
 				}
+				trace := fc.beginHostTrace(m, count, countAge)
 				firstInvalidIndex := -1
 				seenHosts := make(map[string]hostReadDiagnostic)
 				for i := 0; i < count; i++ {
@@ -549,12 +551,14 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 					}
 
 					if m.Action == "GetGenericHostEntry" {
+						fc.traceHostRow(trace, i, result, hostRead.Source)
 						if fc.logDuplicateHost(m, result, i, count, countAge, hostRead, seenHosts) {
 							continue
 						}
 					}
 					fc.reportMetric(ch, m, result, dupCache)
 				}
+				fc.endHostTrace(trace, m, firstInvalidIndex)
 				if firstInvalidIndex >= 0 && aa.ProviderAction != "" {
 					logrus.WithFields(logrus.Fields{"gateway": fc.Gateway, "first_invalid_index": firstInvalidIndex, "count": count, "enumeration_duration_ms": time.Since(started).Milliseconds()}).Warn("host enumeration incomplete; host cache invalidated for next scrape")
 				}
@@ -816,6 +820,9 @@ func getValueType(vt string) prometheus.ValueType {
 
 func main() {
 	flag.Parse()
+	if *flagHostTrace < 0 || *flagHostTrace > 72*time.Hour {
+		logrus.Fatal("host-diagnostic-duration must be between 0 and 72h")
+	}
 	if *flagSOAPTimeout <= 0 || *flagLuaTimeout <= 0 || *flagCollectionTimeout <= 0 {
 		logrus.Fatal("request and collection timeouts must be positive")
 	}
