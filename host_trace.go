@@ -113,7 +113,12 @@ func (fc *FritzboxCollector) traceHostRow(t *hostTrace, index int, row upnp.Resu
 	t.total++
 	id := fc.hostTrace.identity(row)
 	active := traceValue(row, "Active")
-	if active != "0" && active != "1" {
+	switch active {
+	case "true", "1":
+		active = "1"
+	case "false", "0":
+		active = "0"
+	default:
 		active = "other"
 	}
 	iface := traceValue(row, "InterfaceType")

@@ -59,3 +59,29 @@ func TestHostTraceDisabledExpiredAndBudget(t *testing.T) {
 		t.Fatal(status)
 	}
 }
+
+func TestHostTraceActiveValues(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value interface{}
+		want  string
+	}{
+		{"boolean up", true, "1"}, {"boolean down", false, "0"},
+		{"integer up", uint64(1), "1"}, {"integer down", uint64(0), "0"},
+		{"string up", "1", "1"}, {"string down", "0", "0"},
+		{"unknown", "private-value", "other"}, {"missing", nil, "other"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fc := &FritzboxCollector{}
+			trace := &hostTrace{seen: map[string]string{}}
+			row := upnp.Result{}
+			if tc.value != nil {
+				row["Active"] = tc.value
+			}
+			fc.traceHostRow(trace, 0, row, "network")
+			if got := strings.Split(trace.rows[0], ":")[2]; got != tc.want {
+				t.Fatalf("Active=%s, want %s", got, tc.want)
+			}
+		})
+	}
+}
