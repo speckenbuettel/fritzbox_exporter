@@ -198,6 +198,7 @@ type FritzboxCollector struct {
 	soapClient        *http.Client
 	diagnostics       queryDiagnostics
 	hostTrace         hostTraceState
+	hostList          hostListCache
 	URL               string
 	Gateway           string
 	Username          string
@@ -474,6 +475,10 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 		fc.diagnostics.begin("soap", i, m.Service+"/"+m.Action, m.PromDesc.FqName)
 		if ctx.Err() != nil {
 			fc.diagnostics.fail("timeout")
+			continue
+		}
+		if useHostList(m) {
+			fc.collectHostList(ch, m, dupCache)
 			continue
 		}
 		var actArg *upnp.ActionArgument
