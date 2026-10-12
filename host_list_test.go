@@ -52,7 +52,7 @@ func TestHostListCollectionAndCache(t *testing.T) {
 			fmt.Fprintf(w, `<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:X_AVM-DE_GetHostListPathResponse xmlns:u="%s"><NewX_AVM-DE_HostListPath>/list?token=secret</NewX_AVM-DE_HostListPath></u:X_AVM-DE_GetHostListPathResponse></s:Body></s:Envelope>`, service)
 		case "/list":
 			downloads++
-			fmt.Fprint(w, `<List><Item><Active>1</Active><HostName>host</HostName></Item><Item><Active>1</Active><HostName>host</HostName></Item></List>`)
+			fmt.Fprint(w, `<List><Item><Index>22</Index><Active>1</Active><HostName>host</HostName></Item><Item><Index>23</Index><Active>1</Active><HostName>host</HostName></Item></List>`)
 		default:
 			t.Errorf("unexpected request %s", r.URL.Path)
 		}

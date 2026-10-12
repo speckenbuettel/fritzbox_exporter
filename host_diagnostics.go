@@ -100,6 +100,21 @@ func (fc *FritzboxCollector) logDuplicateHost(m *Metric, result upnp.Result, ind
 	}
 	if first, ok := seen[key]; ok {
 		differing := hostResultDifferences(first.Result, result)
+		prefix := "soap"
+		if first.Source == "xml" && read.Source == "xml" {
+			prefix = "xml"
+			// Index is list position, not host identity. Preserve it when it is
+			// explicitly configured as the metric value.
+			if m.Result != "Index" {
+				filtered := make([]string, 0, len(differing))
+				for _, field := range differing {
+					if field != "Index" {
+						filtered = append(filtered, field)
+					}
+				}
+				differing = filtered
+			}
+		}
 		if len(differing) == 0 {
 			identicalHostDuplicates.WithLabelValues(fc.Gateway).Inc()
 			return true
@@ -122,11 +137,11 @@ func (fc *FritzboxCollector) logDuplicateHost(m *Metric, result upnp.Result, ind
 		fc.diagnostics.fail("duplicate", fmt.Errorf("duplicate host metric labels: first_index=%d first_source=%s first_cache_age_seconds=%d duplicate_index=%d duplicate_source=%s duplicate_cache_age_seconds=%d count=%d count_age_seconds=%d cache_ttl_seconds=%d", first.Index, first.Source, first.Age, read.Index, read.Source, read.Age, count, countAge, m.CacheEntryTTL))
 		logrus.WithFields(logrus.Fields{
 			"gateway": fc.Gateway, "metric": m.PromDesc.FqName, "action": m.Action,
-			"soap_results_equal":    len(differing) == 0,
-			"soap_differing_fields": differing,
-			"missing_label_fields":  missing,
-			"empty_label_fields":    empty,
-			"first_index":           first.Index, "first_source": first.Source, "first_cache_age_seconds": first.Age,
+			prefix + "_results_equal":    len(differing) == 0,
+			prefix + "_differing_fields": differing,
+			"missing_label_fields":       missing,
+			"empty_label_fields":         empty,
+			"first_index":                first.Index, "first_source": first.Source, "first_cache_age_seconds": first.Age,
 			"duplicate_index": read.Index, "duplicate_source": read.Source, "duplicate_cache_age_seconds": read.Age,
 			"count": count, "count_age_seconds": countAge, "cache_ttl_seconds": m.CacheEntryTTL,
 		}).Warn("duplicate host metric labels during enumeration")

@@ -134,3 +134,57 @@ func TestInvalidateHostCacheScoped(t *testing.T) {
 		t.Fatal(upnpCache)
 	}
 }
+
+func TestXMLDuplicateComparison(t *testing.T) {
+	logger := logrus.StandardLogger()
+	oldHooks := logger.ReplaceHooks(make(logrus.LevelHooks))
+	defer logger.ReplaceHooks(oldHooks)
+	hook := logtest.NewGlobal()
+	for _, tc := range []struct {
+		name, source, result string
+		active, skip         bool
+		fields               []string
+	}{
+		{"xml position only", "xml", "Active", true, true, nil},
+		{"xml active conflict", "xml", "Active", false, false, []string{"Active"}},
+		{"soap preserves index", "network", "Active", true, false, []string{"Index"}},
+		{"index metric preserves index", "xml", "Index", true, false, []string{"Index"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			hook.Reset()
+			fc := &FritzboxCollector{Gateway: "test"}
+			fc.diagnostics.begin("soap", 0, "hosts", "gateway_hosts")
+			m := &Metric{Result: tc.result, PromDesc: JSONPromDesc{VarLabels: []string{"gateway", "HostName"}}}
+			seen := map[string]hostReadDiagnostic{}
+			first := upnp.Result{"Index": "22", "HostName": "private-host", "Active": true}
+			second := upnp.Result{"Index": "23", "HostName": "private-host", "Active": tc.active}
+			read := hostReadDiagnostic{Source: tc.source}
+			fc.logDuplicateHost(m, first, 22, 32, 0, read, seen)
+			if got := fc.logDuplicateHost(m, second, 23, 32, 0, read, seen); got != tc.skip {
+				t.Fatalf("skip = %v, want %v", got, tc.skip)
+			}
+			event := hook.LastEntry()
+			if tc.skip {
+				if event != nil || fc.diagnostics.current.reason != "" {
+					t.Fatal("identical XML row reported as failure")
+				}
+			} else {
+				prefix := "soap"
+				if tc.source == "xml" {
+					prefix = "xml"
+				}
+				if event == nil || !reflect.DeepEqual(event.Data[prefix+"_differing_fields"], tc.fields) || fc.diagnostics.current.reason != "duplicate" {
+					t.Fatalf("unexpected conflict: %+v", event)
+				}
+				if prefix == "xml" {
+					if _, ok := event.Data["soap_differing_fields"]; ok {
+						t.Fatal("XML logged as SOAP")
+					}
+				}
+			}
+			if first["Index"] != "22" || second["Index"] != "23" {
+				t.Fatal("comparison mutated rows")
+			}
+		})
+	}
+}
