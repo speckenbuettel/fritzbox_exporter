@@ -31,7 +31,7 @@ func (fc *FritzboxCollector) logHostCountCheck(m *Metric, index, count int, age 
 	} else {
 		fields["fresh_count"] = value
 	}
-	logrus.WithFields(fields).Warn("host count diagnostic after invalid index (cache unchanged)")
+	collectionLog.WithFields(fields).Warn("host count diagnostic after invalid index (cache unchanged)")
 }
 
 func (fc *FritzboxCollector) readUncachedHostCount(m *Metric) (upnp.Result, error) {
@@ -135,7 +135,7 @@ func (fc *FritzboxCollector) logDuplicateHost(m *Metric, result upnp.Result, ind
 			}
 		}
 		fc.diagnostics.fail("duplicate", fmt.Errorf("duplicate host metric labels: first_index=%d first_source=%s first_cache_age_seconds=%d duplicate_index=%d duplicate_source=%s duplicate_cache_age_seconds=%d count=%d count_age_seconds=%d cache_ttl_seconds=%d", first.Index, first.Source, first.Age, read.Index, read.Source, read.Age, count, countAge, m.CacheEntryTTL))
-		logrus.WithFields(logrus.Fields{
+		collectionLog.WithFields(logrus.Fields{
 			"gateway": fc.Gateway, "metric": m.PromDesc.FqName, "action": m.Action,
 			prefix + "_results_equal":    len(differing) == 0,
 			prefix + "_differing_fields": differing,

@@ -2,13 +2,15 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"github.com/namsral/flag"
 	"github.com/prometheus/client_golang/prometheus"
 	upnp "github.com/sberk42/fritzbox_exporter/fritzbox_upnp"
-	"github.com/sirupsen/logrus"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -80,7 +82,7 @@ func (fc *FritzboxCollector) readHostList(m *Metric) ([]upnp.Result, error) {
 	}
 	r, e := svc.Actions["X_AVM-DE_GetHostListPath"].CallWithClient(nil, fc.soapClient)
 	if e != nil {
-		return nil, fmt.Errorf("host list path request failed")
+		return nil, fmt.Errorf("host list path request failed (%s)", hostListErrorKind(e))
 	}
 	path, ok := r["X_AVM-DE_HostListPath"].(string)
 	if !ok {
@@ -98,16 +100,15 @@ func (fc *FritzboxCollector) readHostList(m *Metric) ([]upnp.Result, error) {
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	resp, e := client.Do(req)
 	if e != nil {
-		return nil, fmt.Errorf("host list download failed")
+		return nil, fmt.Errorf("host list download failed (%s)", hostListErrorKind(e))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("host list HTTP status %d", resp.StatusCode)
 	}
-	const limit = 4 * 1024 * 1024
-	data, e := io.ReadAll(io.LimitReader(resp.Body, limit+1))
-	if e != nil || len(data) > limit {
-		return nil, fmt.Errorf("host list read failed or exceeds 4 MiB")
+	data, e := readHostListBody(resp.Body)
+	if e != nil {
+		return nil, e
 	}
 	rows, e := parseHostList(bytes.TrimSpace(data))
 	if e != nil {
@@ -138,7 +139,7 @@ func (fc *FritzboxCollector) collectHostList(ch chan<- prometheus.Metric, m *Met
 	if e != nil {
 		collectErrors.Inc()
 		fc.diagnostics.fail("request", e)
-		logrus.Warn(e)
+		collectionLog.Warn(e)
 		return
 	}
 	seen := map[string]hostReadDiagnostic{}
@@ -151,4 +152,31 @@ func (fc *FritzboxCollector) collectHostList(ch chan<- prometheus.Metric, m *Met
 }
 func useHostList(m *Metric) bool {
 	return *flagHostList && strings.HasPrefix(m.Service, "urn:dslforum-org:service:Hosts:") && m.Action == "GetGenericHostEntry" && m.ActionArgument != nil && m.ActionArgument.IsIndex
+}
+
+// Classify without printing errors that may contain a token-bearing URL.
+func hostListErrorKind(err error) string {
+	if errors.Is(err, context.Canceled) {
+		return "canceled"
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout"
+	}
+	var timeout net.Error
+	if errors.As(err, &timeout) && timeout.Timeout() {
+		return "timeout"
+	}
+	return "transport error"
+}
+
+func readHostListBody(reader io.Reader) ([]byte, error) {
+	const limit = 4 * 1024 * 1024
+	data, err := io.ReadAll(io.LimitReader(reader, limit+1))
+	if err != nil {
+		return nil, fmt.Errorf("host list read failed (%s)", hostListErrorKind(err))
+	}
+	if len(data) > limit {
+		return nil, fmt.Errorf("host list exceeds 4 MiB")
+	}
+	return data, nil
 }

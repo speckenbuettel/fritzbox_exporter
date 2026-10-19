@@ -16,7 +16,6 @@ import (
 	"github.com/namsral/flag"
 	"github.com/prometheus/client_golang/prometheus"
 	lua "github.com/sberk42/fritzbox_exporter/fritzbox_lua"
-	"github.com/sirupsen/logrus"
 )
 
 var flagAPIMetricsFile = flag.String("api-metrics-file", "", "Optional API v0 metric definitions, e.g. metrics-api.json; empty disables API collection")
@@ -224,7 +223,7 @@ func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 				if err != nil {
 					c.errors.Inc()
 					requestErrors[endpoint] = err
-					logrus.Warnf("API %s: %s", m.Path, err)
+					collectionLog.Warnf("API %s: %s", m.Path, err)
 				} else {
 					ttl := m.CacheEntryTTL
 					for _, other := range c.metrics {
@@ -246,7 +245,7 @@ func (c *APICollector) Collect(ch chan<- prometheus.Metric) {
 		if err != nil {
 			c.errors.Inc()
 			c.diagnostics.fail("extract", err)
-			logrus.Warnf("API metric %s: value unavailable", m.PromDesc.FqName)
+			collectionLog.Warnf("API metric %s: value unavailable", m.PromDesc.FqName)
 			continue
 		}
 		for _, v := range values {

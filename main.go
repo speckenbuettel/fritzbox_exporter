@@ -338,7 +338,7 @@ func (fc *FritzboxCollector) reportMetric(ch chan<- prometheus.Metric, m *Metric
 			floatval = 0
 		}
 	default:
-		logrus.Warnf("unknown type: %T (value: %v) for metric %s.%s.%s", tval, val, m.Service, m.Action, m.Result)
+		collectionLog.Warnf("unknown type: %T (value: %v) for metric %s.%s.%s", tval, val, m.Service, m.Action, m.Result)
 		collectErrors.Inc()
 		fc.diagnostics.fail("extract")
 		return
@@ -351,7 +351,7 @@ func (fc *FritzboxCollector) reportMetric(ch chan<- prometheus.Metric, m *Metric
 		} else {
 			lval, ok := result[l]
 			if !ok {
-				logrus.Warnf("%s.%s has no result for label %s", m.Service, m.Action, l)
+				collectionLog.Warnf("%s.%s has no result for label %s", m.Service, m.Action, l)
 				lval = ""
 			}
 
@@ -378,7 +378,7 @@ func (fc *FritzboxCollector) reportMetric(ch chan<- prometheus.Metric, m *Metric
 	if err != nil {
 		fc.diagnostics.fail("metric", err)
 		collectErrors.Inc()
-		logrus.Errorf("Can not create metric %s.%s: %s", m.Service, m.Action, err.Error())
+		collectionLog.Errorf("Can not create metric %s.%s: %s", m.Service, m.Action, err.Error())
 	} else {
 		fc.diagnostics.emitted()
 		ch <- metric
@@ -491,7 +491,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 				provRes, err := fc.getActionResult(m, aa.ProviderAction, nil)
 
 				if err != nil {
-					logrus.Warnf("Error getting provider action %s result for %s.%s: %s", aa.ProviderAction, m.Service, m.Action, err.Error())
+					collectionLog.Warnf("Error getting provider action %s result for %s.%s: %s", aa.ProviderAction, m.Service, m.Action, err.Error())
 					collectErrors.Inc()
 					fc.diagnostics.fail("request", err)
 					continue
@@ -500,7 +500,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 				var ok bool
 				value, ok = provRes[aa.Value] // Value contains the result name for provider actions
 				if !ok {
-					logrus.Warnf("provider action %s for %s.%s has no result", m.Service, m.Action, aa.Value)
+					collectionLog.Warnf("provider action %s for %s.%s has no result", m.Service, m.Action, aa.Value)
 					collectErrors.Inc()
 					fc.diagnostics.fail("request")
 					continue
@@ -514,7 +514,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 					err = fmt.Errorf("negative result count")
 				}
 				if err != nil {
-					logrus.Warn(err.Error())
+					collectionLog.Warn(err.Error())
 					collectErrors.Inc()
 					fc.diagnostics.fail("request", err)
 					continue
@@ -538,7 +538,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 					result, err := fc.getActionResult(m, m.Action, actArg)
 
 					if err != nil {
-						logrus.WithFields(logrus.Fields{
+						collectionLog.WithFields(logrus.Fields{
 							"gateway": fc.Gateway, "service": m.Service, "action": m.Action,
 							"index": i, "count": count, "count_age_seconds": countAge,
 							"cache_ttl_seconds": m.CacheEntryTTL,
@@ -565,7 +565,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 				}
 				fc.endHostTrace(trace, m, firstInvalidIndex)
 				if firstInvalidIndex >= 0 && aa.ProviderAction != "" {
-					logrus.WithFields(logrus.Fields{"gateway": fc.Gateway, "first_invalid_index": firstInvalidIndex, "count": count, "enumeration_duration_ms": time.Since(started).Milliseconds()}).Warn("host enumeration incomplete; host cache invalidated for next scrape")
+					collectionLog.WithFields(logrus.Fields{"gateway": fc.Gateway, "first_invalid_index": firstInvalidIndex, "count": count, "enumeration_duration_ms": time.Since(started).Milliseconds()}).Warn("host enumeration incomplete; host cache invalidated for next scrape")
 				}
 
 				continue
@@ -577,7 +577,7 @@ func (fc *FritzboxCollector) Collect(ch chan<- prometheus.Metric) {
 		result, err := fc.getActionResult(m, m.Action, actArg)
 
 		if err != nil {
-			logrus.Warnf("can not collect metrics: %s", err)
+			collectionLog.Warnf("can not collect metrics: %s", err)
 			collectErrors.Inc()
 			fc.diagnostics.fail("request", err)
 			continue
@@ -616,7 +616,7 @@ func (fc *FritzboxCollector) collectLua(ch chan<- prometheus.Metric, dupCache ma
 			pageData, err := fc.LuaSession.LoadData(lm.LuaPage)
 
 			if err != nil {
-				logrus.Errorf("Can not load %s for %s.%s: %s", lm.Path, lm.ResultPath, lm.ResultKey, err.Error())
+				collectionLog.Errorf("Can not load %s for %s.%s: %s", lm.Path, lm.ResultPath, lm.ResultKey, err.Error())
 				luaCollectErrors.Inc()
 				fc.diagnostics.fail("request", err)
 				fc.LuaSession.SID = "" // clear SID in case of error, so force reauthentication
@@ -627,7 +627,7 @@ func (fc *FritzboxCollector) collectLua(ch chan<- prometheus.Metric, dupCache ma
 			data, err = lua.ParseJSON(pageData)
 			if err != nil {
 				fc.diagnostics.fail("json", err)
-				logrus.Errorf("Can not parse JSON from %s for %s.%s: %s", lm.Path, lm.ResultPath, lm.ResultKey, err.Error())
+				collectionLog.Errorf("Can not parse JSON from %s for %s.%s: %s", lm.Path, lm.ResultPath, lm.ResultKey, err.Error())
 				luaCollectErrors.Inc()
 				fc.LuaSession.SID = "" // clear SID in case of error, so force reauthentication
 				continue
@@ -643,7 +643,7 @@ func (fc *FritzboxCollector) collectLua(ch chan<- prometheus.Metric, dupCache ma
 		metricVals, err := extractLuaDefinition(fc.LabelRenames, *cacheEntry.Result, lm)
 
 		if err != nil {
-			logrus.Errorf("Can not get metric values for %s.%s: %s", lm.ResultPath, lm.ResultKey, err.Error())
+			collectionLog.Errorf("Can not get metric values for %s.%s: %s", lm.ResultPath, lm.ResultKey, err.Error())
 			luaCollectErrors.Inc()
 			fc.diagnostics.fail("extract", err)
 			// A missing data field does not invalidate authentication.
@@ -666,7 +666,7 @@ func (fc *FritzboxCollector) reportLuaMetric(ch chan<- prometheus.Metric, lm *Lu
 		} else {
 			lval, ok := value.Labels[l]
 			if !ok {
-				logrus.Warnf("%s.%s from %s?%s has no result for label %s", lm.ResultPath, lm.ResultKey, lm.Path, lm.Params, l)
+				collectionLog.Warnf("%s.%s from %s?%s has no result for label %s", lm.ResultPath, lm.ResultKey, lm.Path, lm.Params, l)
 				lval = ""
 			}
 
@@ -683,7 +683,7 @@ func (fc *FritzboxCollector) reportLuaMetric(ch chan<- prometheus.Metric, lm *Lu
 	key := lm.PromDesc.FqName + ":" + lm.PromDesc.fixedLabelValues + strings.Join(labels, ",")
 	if dupCache[key] {
 		fc.diagnostics.fail("duplicate")
-		logrus.Errorf("%s.%s reported before as: %s\n", lm.ResultPath, lm.ResultPath, key)
+		collectionLog.Errorf("%s.%s reported before as: %s\n", lm.ResultPath, lm.ResultPath, key)
 		luaCollectErrors.Inc()
 		return
 	}
@@ -693,7 +693,7 @@ func (fc *FritzboxCollector) reportLuaMetric(ch chan<- prometheus.Metric, lm *Lu
 	if err != nil {
 		fc.diagnostics.fail("metric", err)
 		luaCollectErrors.Inc()
-		logrus.Errorf("Can not create metric %s.%s: %s", lm.ResultPath, lm.ResultPath, err.Error())
+		collectionLog.Errorf("Can not create metric %s.%s: %s", lm.ResultPath, lm.ResultPath, err.Error())
 	} else {
 		fc.diagnostics.emitted()
 		ch <- metric
@@ -1051,6 +1051,8 @@ func main() {
 		logrus.Fatal("cannot open event archive: ", err)
 	}
 	defer stopArchive()
+	stopLogSummaries := startCollectionLogSummaries()
+	defer stopLogSummaries()
 	go collector.LoadServices()
 
 	prometheus.MustRegister(collector)

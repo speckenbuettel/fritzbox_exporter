@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	upnp "github.com/sberk42/fritzbox_exporter/fritzbox_upnp"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 )
@@ -85,5 +89,40 @@ func TestHostListCollectionAndCache(t *testing.T) {
 	fc.hostList.at = time.Now().Add(-2 * time.Minute)
 	if _, e = fc.readHostList(m); e != nil || downloads != 2 {
 		t.Fatal(e, downloads)
+	}
+}
+
+func TestHostListErrorClassification(t *testing.T) {
+	for _, tc := range []struct {
+		err  error
+		want string
+	}{
+		{context.Canceled, "canceled"},
+		{&url.Error{Op: "Get", URL: "http://router/?token=secret", Err: context.DeadlineExceeded}, "timeout"},
+		{errors.New("secret URL"), "transport error"},
+	} {
+		if got := hostListErrorKind(tc.err); got != tc.want {
+			t.Fatal(got)
+		}
+	}
+}
+
+type failedHostReader struct{}
+
+func (failedHostReader) Read(p []byte) (int, error) {
+	return copy(p, "partial"), context.DeadlineExceeded
+}
+func TestHostListReadFailures(t *testing.T) {
+	_, err := readHostListBody(failedHostReader{})
+	if err == nil || err.Error() != "host list read failed (timeout)" {
+		t.Fatal(err)
+	}
+	_, err = readHostListBody(strings.NewReader(strings.Repeat("x", 4*1024*1024+1)))
+	if err == nil || err.Error() != "host list exceeds 4 MiB" {
+		t.Fatal(err)
+	}
+	data, err := readHostListBody(io.LimitReader(strings.NewReader("ok"), 2))
+	if err != nil || string(data) != "ok" {
+		t.Fatal(err)
 	}
 }

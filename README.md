@@ -175,3 +175,11 @@ Docker builds the checked-out source with Go 1.25.5, including SQLite without CG
 
 This fork remains under the [Apache License 2.0](LICENSE), inherited from upstream. Original copyright and license notices are retained. This is a modified fork;
 [CHANGES_FROM_UPSTREAM.md](CHANGES_FROM_UPSTREAM.md) records its main additions.
+
+## Test release: optional XML host list and quieter logs
+
+For the 48-hour test, keep the 4040 on `HOST_LIST_XML=true` and the 5690 on the default `HOST_LIST_XML=false`. Keep `HOST_DIAGNOSTIC_DURATION=0` on both.
+SOAP retains AddressSource (DHCP/static); the tested XML list lacks it. See [XML configuration](HOST_LIST_XML.md). No automatic fallback is used.
+
+Collector warnings/errors are logged immediately on their first occurrence in each five-minute window. Repeated matching messages are summarized at the end of the window with `suppressed_repeats` (additional occurrences, excluding the first). Host index/count/cache-age changes do not create new groups; different gateways, actions, metrics and conflict fields do. The grouping is bounded to 1,024 entries; additional groups are logged normally. Summaries also flush on graceful shutdown.
+Error counters and query diagnostics remain unchanged. Startup errors and explicit bounded host traces are not suppressed. XML read failures and the 4 MiB size limit now have separate messages.
