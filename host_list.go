@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-var flagHostList = flag.Bool("host-list-xml", false, "Experimental: replace indexed Hosts reads with a cached XML host list")
+var flagHostList = flag.Bool("host-list-xml", false, "Replace indexed Hosts reads with a cached XML host list (optional)")
 
 type hostListCache struct {
 	rows []upnp.Result

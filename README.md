@@ -30,14 +30,14 @@ The API is needed because some newer firmware exposes CPU, RAM, energy, VPN and 
 
 ## Run with Docker or Portainer
 
-Stable image: **`senecaiii/fritzbox_exporter:v1.1.2`** - **Linux ARM64**. `latest` is not updated by this fork's release workflow. Other architectures require a separate build.
+Stable image: **`senecaiii/fritzbox_exporter:v1.2.0`** - **Linux ARM64**. `latest` is not updated by this fork's release workflow. Other architectures require a separate build.
 
 Create a dedicated FRITZ!Box user with permission for the selected data and enable the applicable TR-064/UPnP access. Copy the chosen profile's three files into `./config`. Set `FRITZBOX_USERNAME` and `FRITZBOX_PASSWORD` outside version control.
 
 ```yaml
 services:
   fritzbox-exporter:
-    image: senecaiii/fritzbox_exporter:v1.1.2
+    image: senecaiii/fritzbox_exporter:v1.2.0
     restart: unless-stopped
     stop_grace_period: 70s
     ports:
@@ -176,10 +176,12 @@ Docker builds the checked-out source with Go 1.25.5, including SQLite without CG
 This fork remains under the [Apache License 2.0](LICENSE), inherited from upstream. Original copyright and license notices are retained. This is a modified fork;
 [CHANGES_FROM_UPSTREAM.md](CHANGES_FROM_UPSTREAM.md) records its main additions.
 
-## Test release: optional XML host list and quieter logs
+## Optional XML host list and quieter logs (v1.2.0)
 
-For the 48-hour test, keep the 4040 on `HOST_LIST_XML=true` and the 5690 on the default `HOST_LIST_XML=false`. Keep `HOST_DIAGNOSTIC_DURATION=0` on both.
+The optional XML collector was tested on a FRITZ!Box 4040 over VPN; the FRITZ!Box 5690 was tested with SOAP. Use `HOST_LIST_XML=true` to enable XML, or keep the default `false` for SOAP. `HOST_DIAGNOSTIC_DURATION` can be omitted: its default is 0 (disabled). The opt-in diagnostic remains available for troubleshooting.
 SOAP retains AddressSource (DHCP/static); the tested XML list lacks it. See [XML configuration](HOST_LIST_XML.md). No automatic fallback is used.
 
 Collector warnings/errors are logged immediately on their first occurrence in each five-minute window. Repeated matching messages are summarized at the end of the window with `suppressed_repeats` (additional occurrences, excluding the first). Host index/count/cache-age changes do not create new groups; different gateways, actions, metrics and conflict fields do. The grouping is bounded to 1,024 entries; additional groups are logged normally. Summaries also flush on graceful shutdown.
+The extended test showed no logged XML host-list failures or index errors in XML mode; intermittent timeouts on the remote 4040 remain a known operational limitation, not a resolved issue.
+
 Error counters and query diagnostics remain unchanged. Startup errors and explicit bounded host traces are not suppressed. XML read failures and the 4 MiB size limit now have separate messages.
