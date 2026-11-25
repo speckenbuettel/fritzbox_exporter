@@ -156,10 +156,12 @@ func (a *archive) run() {
 	go func() {
 		defer a.wg.Done()
 		for job := range a.queue {
+			started := time.Now()
+			before := a.db.Stats()
 			if err := a.store(job, time.Now().UTC()); err != nil {
 				a.writeErrors.Add(1)
 				archiveWriteErrors.Inc()
-				fmt.Fprintln(os.Stderr, "event archive: write failed:", err)
+				a.logDatabaseFailure(nil, "write", err, started, before, 0, 0, 0)
 			}
 		}
 	}()

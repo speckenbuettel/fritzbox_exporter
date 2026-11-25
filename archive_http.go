@@ -104,10 +104,13 @@ func (a *archive) events(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	args = append(args, limit, offset)
+	started := time.Now()
+	before := a.db.Stats()
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	rows, err := a.db.QueryContext(ctx, `SELECT id,gateway,kind,backend,source,metric,reason,message,event_time,raw_time,first_seen,last_seen,count,active_key IS NOT NULL FROM events WHERE `+strings.Join(where, " AND ")+` ORDER BY last_seen DESC,event_time DESC,id DESC LIMIT ? OFFSET ?`, args...)
 	if err != nil {
+		a.logDatabaseFailure(ctx, "query", err, started, before, limit, offset, 0)
 		http.Error(w, "archive unavailable", 503)
 		return
 	}
@@ -122,6 +125,13 @@ func (a *archive) events(w http.ResponseWriter, r *http.Request) {
 	rowErr := rows.Err()
 	rows.Close()
 	if err != nil || rowErr != nil {
+		stage := "scan"
+		cause := err
+		if cause == nil {
+			stage = "iterate"
+			cause = rowErr
+		}
+		a.logDatabaseFailure(ctx, stage, cause, started, before, limit, offset, len(data))
 		http.Error(w, "archive unavailable", 503)
 		return
 	}
