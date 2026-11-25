@@ -200,3 +200,57 @@ func TestArchiveOptionalToken(t *testing.T) {
 		a.db.Close()
 	}
 }
+
+// Simulate an existing archive without the display index, then reopen twice.
+func TestArchiveDisplayIndexUpgrade(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "events.db")
+	open := func() *archive {
+		a, err := openArchive(path, "box", "", "Europe/Berlin", 24*time.Hour, 100, 8)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return a
+	}
+	a := open()
+	if err := a.store(archiveJob{Records: []archiveRecord{{Kind: "router", Key: "existing", Message: "preserve this event"}}}, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.db.Exec("DROP INDEX events_display_order"); err != nil {
+		t.Fatal(err)
+	}
+	a.db.Close()
+	for i := 0; i < 2; i++ {
+		a = open()
+		var count int
+		if err := a.db.QueryRow("SELECT count(*) FROM events WHERE message='preserve this event'").Scan(&count); err != nil || count != 1 {
+			t.Fatalf("data lost: %d %v", count, err)
+		}
+		rows, err := a.db.Query("EXPLAIN QUERY PLAN SELECT * FROM events ORDER BY last_seen DESC,event_time DESC,id DESC LIMIT 200")
+		if err != nil {
+			t.Fatal(err)
+		}
+		plan := ""
+		for rows.Next() {
+			var id, parent, unused int
+			var detail string
+			if err := rows.Scan(&id, &parent, &unused, &detail); err != nil {
+				t.Fatal(err)
+			}
+			plan += detail
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(plan, "events_display_order") || strings.Contains(plan, "TEMP B-TREE") {
+			t.Fatal(plan)
+		}
+		response := httptest.NewRecorder()
+		a.events(response, httptest.NewRequest("GET", "/api/events", nil))
+		if response.Code != 200 || !strings.Contains(response.Body.String(), "preserve this event") {
+			t.Fatal(response)
+		}
+		a.db.Close()
+	}
+}

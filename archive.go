@@ -129,6 +129,7 @@ func openArchive(path, gateway, token, zone string, retention time.Duration, max
  event_time TEXT NOT NULL, raw_time TEXT NOT NULL, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
  count INTEGER NOT NULL DEFAULT 1, active_key TEXT UNIQUE, dedup_key TEXT UNIQUE);
  CREATE INDEX IF NOT EXISTS events_time ON events(last_seen);
+ CREATE INDEX IF NOT EXISTS events_display_order ON events(last_seen DESC,event_time DESC,id DESC);
  PRAGMA user_version=1;`)
 	if err != nil {
 		return nil, err
