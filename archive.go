@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	lua "github.com/sberk42/fritzbox_exporter/fritzbox_lua"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -21,6 +23,7 @@ import (
 )
 
 var (
+	flagArchiveSource    = flag.String("archive-source", "webui", "Router events source: webui (all UI categories) or soap (legacy subset)")
 	flagArchiveFile      = flag.String("archive-file", "", "SQLite archive path; empty disables archive")
 	flagArchiveToken     = flag.String("archive-token", "", "Optional read API bearer token; empty allows access without login")
 	flagArchiveTimezone  = flag.String("archive-timezone", "Europe/Berlin", "Router event timezone")
@@ -55,6 +58,9 @@ type archiveJob struct {
 const archiveTimeLayout = "2006-01-02T15:04:05.000000000Z"
 
 type archive struct {
+	webSession     *lua.LuaSession
+	webTransport   http.RoundTripper
+	source         string
 	db             *sql.DB
 	gateway, token string
 	zone           *time.Location

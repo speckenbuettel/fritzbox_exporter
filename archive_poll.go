@@ -41,6 +41,10 @@ func (a *archive) pollOnce(ctx context.Context, fc *FritzboxCollector) {
 	}
 	callCtx, cancel := context.WithTimeout(ctx, *flagSOAPTimeout)
 	defer cancel()
+	if a.source == "webui" {
+		a.pollWebEvents(callCtx)
+		return
+	}
 	fc.Lock()
 	root := fc.Root
 	fc.Unlock()

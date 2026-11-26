@@ -24,6 +24,10 @@ func startEventArchive(fc *FritzboxCollector) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
+	if err = a.configureEventSource(fc); err != nil {
+		a.db.Close()
+		return nil, err
+	}
 	eventArchive = a
 	a.run()
 	prometheus.MustRegister(archiveWriteErrors, archiveDropped, archivePollErrors, archiveLastPoll)

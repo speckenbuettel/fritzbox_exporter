@@ -104,11 +104,12 @@ Use `-h` for all flags. `-nolua` disables Lua, not API collection. A remote rout
 
 ## Event archive and `/events`
 
-Enable `ARCHIVE_FILE` and mount persistent local storage. The archive polls SOAP `DeviceInfo/GetDeviceLog` independently of Prometheus; query errors and recoveries are recorded when metrics are collected. `/events` provides filters, pagination, occurrence counts and storage/poll status. `/api/events` provides read-only JSON. It requires no Grafana plugin and does not expose SQLite directly.
+Enable `ARCHIVE_FILE` and mount persistent local storage. The archive polls the WebGUI event list `data.lua?page=log&filter=all` independently of Prometheus using a separate login session; query errors and recoveries are recorded when metrics are collected. `/events` provides filters, pagination, occurrence counts and storage/poll status. `/api/events` provides read-only JSON. It requires no Grafana plugin and does not expose SQLite directly.
 
 | Environment variable | Default | Meaning |
 | --- | --- | --- |
 | `ARCHIVE_FILE` | Empty | Disabled unless a database path is provided, e.g. `/data/events.db`. |
+| `ARCHIVE_SOURCE` | `webui` | All categories returned by the WebGUI event list. `soap` restores legacy GetDeviceLog, which can omit VPN events. No silent fallback. |
 | `ARCHIVE_TOKEN` | Empty | Optional read-access token; at least 16 characters if set. |
 | `ARCHIVE_TIMEZONE` | `Europe/Berlin` | Timezone of the router's event timestamps. |
 | `ARCHIVE_INTERVAL` | `30s` | Router event polling interval. |
@@ -185,3 +186,10 @@ Collector warnings/errors are logged immediately on their first occurrence in ea
 The extended test showed no logged XML host-list failures or index errors in XML mode; intermittent timeouts on the remote 4040 remain a known operational limitation, not a resolved issue.
 
 Error counters and query diagnostics remain unchanged. Startup errors and explicit bounded host traces are not suppressed. XML read failures and the 4 MiB size limit now have separate messages.
+
+
+### v1.2.3-test: complete WebGUI event categories
+
+The new archive source was verified on both FRITZ!Box 5690 and 4040, including VPN disconnections with reasons 12 SA loss and 3 IKE server. It uses the existing GATEWAY_LUAURL, USERNAME, PASSWORD, SESSIONAPI and TLS verification settings, independently of metrics-lua.json and metrics-api.json. No metric definition changes are required. HOST_LIST_XML is unrelated and remains unchanged.
+
+All event categories still present in the router WebGUI are imported on the next successful poll, then refreshed at ARCHIVE_INTERVAL. Existing archives remain intact; identical timestamp/message occurrences use the legacy deduplication key. Previously deleted/overwritten router events cannot be recovered. Events that disappear between successful polls may be missed, and configured archive retention/size limits still apply. A successful poll means the all-categories response was read and committed, not an absolute guarantee that every historical router event was captured.
